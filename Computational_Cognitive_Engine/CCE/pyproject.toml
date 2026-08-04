@@ -1,0 +1,11 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "computational_consciousness_engine"
+version = "0.0.1"
+description = "Computational Consciousness Engine"
+readme = "README.md"
+authors = [{name = "Your Name"}]
+dependencies = []
