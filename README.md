@@ -1,6 +1,8 @@
 # 🌌 Aetherius Unified Engine
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![JAX](https://img.shields.io/badge/Accelerated_by-JAX-blue.svg)](https://github.com/google/jax)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jzkool/Aetherius-Cognitive-Systems/blob/main/AETHERIUS_LIVE_SIMULATOR.ipynb)
 
 Welcome to the **Aetherius Unified System**. This open-source repository houses the codebase for a deterministic, neuro-symbolic engine that translates natural language into geometric tensors and resolves them via differential geometry.
 
