@@ -4,7 +4,7 @@ emoji: 🧠
 colorFrom: indigo
 colorTo: purple
 sdk: gradio
-sdk_version: "4.0.0"
+sdk_version: 5.0.0
 app_file: app.py
 pinned: false
 ---
@@ -150,4 +150,3 @@ Once the 7D space stabilizes, we apply Persistent Homology:
 The `gmstring` is hashed (e.g., `SHA-256: 4f8b...9c1a`) and compiled into XLA.
 The output $\Omega$ identifies this geometric state mathematically as a **Torus intersecting a Klein Bottle**. 
 *Topological Interpretation:* The system "understands" this input not as a literal truth, but as a bounded, self-sustaining logical paradox. It has physically resolved the contradiction by elevating the concept of "reality" into a higher dimension where subjective belief is orthogonal to objective truth.
-
