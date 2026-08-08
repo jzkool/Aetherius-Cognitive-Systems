@@ -1,0 +1,4 @@
+{
+  "summary": "Rewrote ricci_fisher_flow.py to implement formal tensor calculus (Christoffel symbols, Ricci tensor, Perelman normalization).",
+  "updatedAt": "2026-08-08T14:44:08.082663300Z"
+}

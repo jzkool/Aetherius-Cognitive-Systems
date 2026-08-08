@@ -1,4 +1,4 @@
 {
-  "summary": "Updated CLI script for dynamic text input.",
-  "updatedAt": "2026-08-07T17:45:40.815906200Z"
+  "summary": "Fixed run_aetherius.py to use dynamic adjacency for paradox testing.",
+  "updatedAt": "2026-08-08T14:24:24.940109100Z"
 }

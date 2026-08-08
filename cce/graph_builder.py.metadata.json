@@ -1,4 +1,4 @@
 {
-  "summary": "Upgraded GraphBuilder with Semantic Heuristic Engine.",
-  "updatedAt": "2026-08-07T17:45:29.970089900Z"
+  "summary": "Rewrote graph_builder.py to formally implement the Semantic Contrast Predicate $C(t_i, t_j)$.",
+  "updatedAt": "2026-08-08T14:44:24.493344900Z"
 }

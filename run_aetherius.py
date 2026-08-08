@@ -38,7 +38,7 @@ if __name__ == "__main__":
     
     if args.paradox:
         text = "The truth is a lie that becomes real only when believed, yet it remains false even after it changes reality."
-        run_simulation(text, is_math=False, synthesize=args.synthesize, use_hardcoded_adj=True)
+        run_simulation(text, is_math=False, synthesize=args.synthesize, use_hardcoded_adj=False)
     elif args.math:
         run_simulation(args.math, is_math=True, synthesize=args.synthesize, use_hardcoded_adj=False)
     elif args.text:

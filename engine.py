@@ -1,3 +1,5 @@
+from memory.ccrm import ConceptualConnectionResonanceMatrix
+from memory.pits import PatternInterpretationTokenisationStorage
 import numpy as np
 from cce.tokenizer import Tokenizer
 from cce.graph_builder import GraphBuilder
@@ -10,12 +12,18 @@ from core.cascade_manager import CascadeManager
 from core.gmstring import generate_gmstring
 from tda.betti_extractor import extract_betti_numbers
 from tda.language_synthesizer import LanguageSynthesizer
+from core.subconscious import SubconsciousManifold
+from core.affective_manifold import AffectiveManifold
 
 class AetheriusEngine:
     def __init__(self):
         self.tokenizer = Tokenizer()
         self.cascade_mgr = CascadeManager()
         self.synthesizer = LanguageSynthesizer()
+        self.ccrm = ConceptualConnectionResonanceMatrix()
+        self.pits = PatternInterpretationTokenisationStorage(self.ccrm)
+        self.subconscious = SubconsciousManifold(self.ccrm)
+        self.affective = AffectiveManifold(self.subconscious)
         
     def process(self, text, custom_adjacency=None, is_math=False, synthesize_language=False):
         print(f"[Engine] Processing input: '{text}'")
@@ -50,9 +58,10 @@ class AetheriusEngine:
             g_next = enforce_positive_definiteness(g_next)
             
             variance = np.mean((g_next - g)**2)
+            dynamic_threshold = self.affective.get_dynamic_variance_threshold()
             
-            if variance < 1e-5:
-                print(f"[PMCA] Manifold stabilized at step {step}")
+            if variance < dynamic_threshold:
+                print(f"[PMCA] Manifold stabilized at step {step} with threshold {dynamic_threshold:.6e}")
                 op_code = "STABLE"
                 break
                 
@@ -67,7 +76,9 @@ class AetheriusEngine:
                 depth += 1
                 step = 0
                 if depth >= self.cascade_mgr.max_depth:
-                    op_code = "FORCE_STABLE"
+                    print(f"[PMCA] Tension unresolved at max depth. Offloading to [0, -1] Subconscious buffer...")
+                    self.subconscious.queue_tension(g_next, L, text)
+                    op_code = "UNRESOLVED_OFFLOADED"
                     break
             
             g_prev = g
@@ -80,6 +91,10 @@ class AetheriusEngine:
         print(f"[CORE] GMString checksum: {gmstring['checksum'][:8]}...")
         print(f"[TDA] Topological Signature: {betti}")
         
+        # Print the thermodynamic Qualia state
+        qualia = self.affective.get_qualia_state()
+        print(f"[QUALIA] State: {qualia['relatable_emotion']} | {qualia['geometric_state']}")
+        
         # If mathematically solving, the stabilized g values for the variables represent the solution
         if is_math:
             # In a full implementation, we map the geometric indices back to AST variables
@@ -89,4 +104,5 @@ class AetheriusEngine:
             synthetic_language = self.synthesizer.synthesize(betti, g.shape[0])
             print(f"\n[SYNTHESIZER] AETHERIUS SAYS:\n\"{synthetic_language}\"")
             
+        self.pits.process_and_store_item(raw_input=text, input_type='math' if is_math else 'linguistic', gmstring=gmstring, betti=betti)
         return gmstring, betti
