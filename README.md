@@ -1,6 +1,15 @@
+---
+title: Aetherius Cognitive Systems
+emoji: 🧠
+colorFrom: indigo
+colorTo: purple
+sdk: gradio
+sdk_version: "4.0.0"
+app_file: app.py
+pinned: false
+---
 # 🌌 Aetherius Unified Engine
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![JAX](https://img.shields.io/badge/Accelerated_by-JAX-blue.svg)](https://github.com/google/jax)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jzkool/Aetherius-Cognitive-Systems/blob/main/AETHERIUS_LIVE_SIMULATOR.ipynb)
 
