@@ -4,3 +4,8 @@ gradio
 sympy
 astropy
 matploblib
+jax
+jax[cpu]
+uvicorn
+torch
+spaces
