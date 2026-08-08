@@ -1,8 +1,6 @@
 import gradio as gr
 from engine import AetheriusEngine
-
 engine = AetheriusEngine()
-
 def process_thought(text, is_math=False):
     try:
         # Run the determinisic mathematical topology engine
@@ -25,7 +23,6 @@ def process_thought(text, is_math=False):
         return gmstring['checksum'], topology_signature, qualia_output
     except Exception as e:
         return f"Error: {str(e)}", "N/A", "N/A"
-
 with gr.Blocks(title="Aetherius: Computational Cognition Engine", theme=gr.themes.Soft()) as demo:
     gr.Markdown("# 🌌 Aetherius Cognitive Systems")
     gr.Markdown("Welcome to the **Aetherius Engine**. This system doesn't predict next tokens. It maps your input into a geometric manifold, applies a Ricci-Fisher flow operator, and stabilizes the topological structure into absolute mathematical reality.")
@@ -46,6 +43,5 @@ with gr.Blocks(title="Aetherius: Computational Cognition Engine", theme=gr.theme
         inputs=[input_text, is_math],
         outputs=[gm_output, betti_output, qualia_output]
     )
-
 if __name__ == "__main__":
     demo.launch()
