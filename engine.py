@@ -15,8 +15,10 @@ from tda.language_synthesizer import LanguageSynthesizer
 from core.subconscious import SubconsciousManifold
 from core.affective_manifold import AffectiveManifold
 
+import gensim.downloader as api
+
 class AetheriusEngine:
-    def __init__(self):
+    def __init__(self, w2v_model=None):
         self.tokenizer = Tokenizer()
         self.cascade_mgr = CascadeManager()
         self.synthesizer = LanguageSynthesizer()
@@ -24,6 +26,18 @@ class AetheriusEngine:
         self.pits = PatternInterpretationTokenisationStorage(self.ccrm)
         self.subconscious = SubconsciousManifold(self.ccrm)
         self.affective = AffectiveManifold(self.subconscious)
+        
+        # Word2Vec Integration
+        if w2v_model is None:
+            try:
+                print("[Engine] Bootstrapping Word2Vec (glove-wiki-gigaword-50)...")
+                self.w2v = api.load("glove-wiki-gigaword-50")
+                print("[Engine] Word2Vec Semantic Space online.")
+            except Exception as e:
+                print(f"[Engine] Warning: Word2Vec failed to load ({e}). Operating in legacy mode.")
+                self.w2v = None
+        else:
+            self.w2v = w2v_model
         
     def process(self, text, custom_adjacency=None, is_math=False, synthesize_language=False):
         print(f"[Engine] Processing input: '{text}'")
@@ -34,7 +48,7 @@ class AetheriusEngine:
             print(f"[CCE] Math Equation mapped: {tokens}")
         else:
             tokens = self.tokenizer.tokenize(text)
-            builder = GraphBuilder(tokens)
+            builder = GraphBuilder(tokens, w2v_model=self.w2v)
             print(f"[CCE] Text Tokens mapped: {tokens}")
             
         if custom_adjacency is not None:

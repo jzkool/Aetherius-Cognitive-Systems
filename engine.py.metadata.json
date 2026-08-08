@@ -1,4 +1,4 @@
 {
-  "summary": "Integrated Affective Manifold into engine.py for dynamic variance control.",
-  "updatedAt": "2026-08-08T14:23:29.609535400Z"
+  "summary": "Updated AetheriusEngine to dynamically load Word2Vec model on initialization.",
+  "updatedAt": "2026-08-08T16:49:37.295378800Z"
 }

@@ -1,12 +1,13 @@
 import numpy as np
 
 class GraphBuilder:
-    def __init__(self, tokens):
+    def __init__(self, tokens, w2v_model=None):
         self.tokens = tokens
         self.n = len(tokens)
         self.adjacency = np.zeros((self.n, self.n))
+        self.w2v = w2v_model
         
-        # Formal Logic Dictionary D
+        # Formal Logic Dictionary D (Fallback overrides)
         self.contrast_pairs = {
             ("truth", "lie"), ("real", "false"), ("true", "false"),
             ("create", "destroy"), ("light", "dark"), ("good", "evil"), 
@@ -34,14 +35,25 @@ class GraphBuilder:
         is_recursive_paradox = (w1_lower in self.recursive_subjects and w2_lower in self.recursive_predicates) or \
                                (w2_lower in self.recursive_subjects and w1_lower in self.recursive_predicates)
         if is_recursive_paradox:
-            return 2
+            return -0.99
             
-        # Check C(t_i, t_j) = 1: Formal logical negation
+        # Check formal logical negation override
         for pair in self.contrast_pairs:
             if (w1_lower == pair[0] and w2_lower == pair[1]) or (w1_lower == pair[1] and w2_lower == pair[0]):
-                return 1
+                return -0.9
                 
-        # C(t_i, t_j) = 0: No semantic contradiction
+        # Word2Vec Dynamic Semantic Distance
+        if self.w2v is not None:
+            if w1_lower in self.w2v and w2_lower in self.w2v:
+                sim = self.w2v.similarity(w1_lower, w2_lower)
+                # If words are semantically distant/opposed (cosine sim < 0.2), inject tension
+                if sim < 0.2:
+                    return -0.5
+                # If words are semantically aligned (cosine sim > 0.6), inject structural harmony
+                elif sim > 0.6:
+                    return 0.5
+                    
+        # C(t_i, t_j) = 0: No semantic contradiction detected
         return 0
 
     def build(self):
@@ -51,14 +63,12 @@ class GraphBuilder:
                 word_i = self.tokens[i]
                 word_j = self.tokens[j]
                 
-                c_val = self.semantic_contrast_predicate(word_i, word_j)
+                weight = self.semantic_contrast_predicate(word_i, word_j)
                 
-                if c_val == 2:
-                    # Recursive self-referential paradox
-                    self.add_edge(i, j, -0.99)
-                elif c_val == 1:
-                    # Standard formal negation
-                    self.add_edge(i, j, -0.9)
+                if weight < 0:
+                    self.add_edge(i, j, weight)
+                elif weight > 0:
+                    self.add_edge(i, j, weight)
                 else:
                     # Syntactic Flow +c
                     distance = j - i

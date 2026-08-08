@@ -1,4 +1,4 @@
 {
-  "summary": "Rewrote graph_builder.py to formally implement the Semantic Contrast Predicate $C(t_i, t_j)$.",
-  "updatedAt": "2026-08-08T14:44:24.493344900Z"
+  "summary": "Updated GraphBuilder to compute Semantic Contrast using the Word2Vec similarity.",
+  "updatedAt": "2026-08-08T16:49:30.641969300Z"
 }
