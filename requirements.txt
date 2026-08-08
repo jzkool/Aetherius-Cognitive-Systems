@@ -3,7 +3,7 @@ numpy
 gradio
 sympy
 astropy
-matploblib
+matplotlib
 jax
 jax[cpu]
 uvicorn
