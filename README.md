@@ -3,8 +3,9 @@ title: Aetherius Cognitive Systems
 emoji: 🧠
 colorFrom: indigo
 colorTo: purple
-sdk: docker
+sdk: gradio
 pinned: false
+license: agpl-3.0
 ---
 # 🌌 Aetherius Unified Engine
 
