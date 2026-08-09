@@ -1,4 +1,4 @@
 {
-  "summary": "Added wikipedia to requirements.txt",
-  "updatedAt": "2026-08-09T01:57:35.293060300Z"
+  "summary": "Added huggingface_hub back to requirements.txt to fix the Gradio import error.",
+  "updatedAt": "2026-08-09T16:39:05.676795800Z"
 }

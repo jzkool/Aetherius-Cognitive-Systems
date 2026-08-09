@@ -3,10 +3,7 @@ title: Aetherius Cognitive Systems
 emoji: 🧠
 colorFrom: indigo
 colorTo: purple
-sdk: gradio
-sdk_version: 4.44.1
-python_version: "3.11"
-app_file: app.py
+sdk: docker
 pinned: false
 ---
 # 🌌 Aetherius Unified Engine
