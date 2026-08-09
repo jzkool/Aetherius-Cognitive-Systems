@@ -44,4 +44,4 @@ with gr.Blocks(title="Aetherius: Computational Cognition Engine", theme=gr.theme
         outputs=[gm_output, betti_output, qualia_output]
     )
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(server_name="0.0.0.0", server_port=7860)
