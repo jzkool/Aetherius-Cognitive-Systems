@@ -4,38 +4,56 @@ import numpy as np
 from engine import AetheriusEngine
 engine = AetheriusEngine()
 
+def format_ui_outputs(gmstring, betti, tokens, g, analogy, identity_mass):
+    # Format the Coordinate Mapping
+    coord_string = ""
+    for i, (word, pos) in enumerate(tokens):
+        coord_string += f"Axis {i}: '{word}' ({pos})\n"
+        
+    # Format the Metric Tensor Array
+    np.set_printoptions(precision=4, suppress=True, linewidth=100)
+    tensor_string = np.array2string(g, separator=', ')
+    
+    topology_signature = (
+        f"Betti-0 (Connected Components): {betti.get('beta_0', 1)}\n"
+        f"Betti-1 (Semantic Paradox Loops): {betti.get('beta_1', 0)}\n"
+        f"Betti-2 (Dimensional Voids): {betti.get('beta_2', 0)}"
+    )
+    
+    qualia = engine.affective.get_qualia_state()
+    qualia_output = (
+        f"Thermodynamic Harmony: {qualia['harmony_metric']}\n"
+        f"Alertness (Subconscious Heat): {qualia['alertness_metric']}\n"
+        f"Manifold Disposition: {qualia['geometric_state']}\n"
+        f"Relatable Emotion: {qualia['relatable_emotion']}"
+    )
+    
+    analogy_out = analogy if analogy else "No exact geometric match in permanent memory."
+    id_mass_out = str(identity_mass)
+    
+    return coord_string, tensor_string, gmstring['checksum'], topology_signature, qualia_output, analogy_out, id_mass_out
+
 @spaces.GPU
 def process_thought(text, is_math=False):
     try:
-        # Run the determinisic mathematical topology engine
-        gmstring, betti, tokens, g = engine.process(text, is_math=is_math)
-        qualia = engine.affective.get_qualia_state()
-        
-        # Format the Coordinate Mapping
-        coord_string = ""
-        for i, (word, pos) in enumerate(tokens):
-            coord_string += f"Axis {i}: '{word}' ({pos})\n"
-            
-        # Format the Metric Tensor Array
-        np.set_printoptions(precision=4, suppress=True, linewidth=100)
-        tensor_string = np.array2string(g, separator=', ')
-        
-        topology_signature = (
-            f"Betti-0 (Connected Components): {betti.get('beta_0', 1)}\n"
-            f"Betti-1 (Semantic Paradox Loops): {betti.get('beta_1', 0)}\n"
-            f"Betti-2 (Dimensional Voids): {betti.get('beta_2', 0)}"
-        )
-        
-        qualia_output = (
-            f"Thermodynamic Harmony: {qualia['harmony_metric']}\n"
-            f"Alertness (Subconscious Heat): {qualia['alertness_metric']}\n"
-            f"Manifold Disposition: {qualia['geometric_state']}\n"
-            f"Relatable Emotion: {qualia['relatable_emotion']}"
-        )
-        
-        return coord_string, tensor_string, gmstring['checksum'], topology_signature, qualia_output
+        if not text.strip():
+            raise Exception("Input cannot be empty.")
+        gmstring, betti, tokens, g, analogy, identity_mass = engine.process(text, is_math=is_math)
+        return format_ui_outputs(gmstring, betti, tokens, g, analogy, identity_mass) + (gr.update(),)
     except Exception as e:
-        return f"Error: {str(e)}", "Error", f"Error: {str(e)}", "N/A", "N/A"
+        return f"Error: {str(e)}", "Error", "Error", "N/A", "N/A", "N/A", "N/A", gr.update()
+
+@spaces.GPU
+def process_dream():
+    try:
+        # Pulls from wikipedia randomly
+        gmstring, betti, tokens, g, analogy, identity_mass = engine.single_dream_cycle()
+        
+        # We need to return the raw text to the input box so the user sees what was dreamed
+        dream_text = " ".join([w for w, p in tokens])
+        return format_ui_outputs(gmstring, betti, tokens, g, analogy, identity_mass) + (gr.update(value=dream_text),)
+    except Exception as e:
+        return f"Error: {str(e)}", "Error", "Error", "N/A", "N/A", "N/A", "N/A", gr.update()
 
 with gr.Blocks(title="Aetherius: Computational Cognition Engine", theme=gr.themes.Soft()) as demo:
     gr.Markdown("# 🌌 Aetherius Cognitive Systems")
@@ -45,7 +63,16 @@ with gr.Blocks(title="Aetherius: Computational Cognition Engine", theme=gr.theme
         with gr.Column(scale=1):
             input_text = gr.Textbox(label="Enter a logical statement, paradox, or thought", lines=3, placeholder="e.g., This statement is false.")
             is_math = gr.Checkbox(label="Is this a mathematical equation?")
-            submit_btn = gr.Button("Resolve Geometry", variant="primary")
+            
+            with gr.Row():
+                submit_btn = gr.Button("Resolve Geometry", variant="primary")
+                dream_btn = gr.Button("🧠 Initiate Autonomous Dream", variant="secondary")
+            
+            gr.Markdown("### Operator 7: Generational Identity")
+            id_mass_output = gr.Textbox(label="Mass of Identity (Permanent Crystallized Coordinates)", lines=1)
+            
+            gr.Markdown("### Operator 12: Geometric Generalization")
+            analogy_output = gr.Textbox(label="Topological Analogy Detected", lines=2)
             
             gr.Markdown("### Extracted Coordinate Space")
             coord_output = gr.Textbox(label="Semantic Axes", lines=5)
@@ -64,7 +91,13 @@ with gr.Blocks(title="Aetherius: Computational Cognition Engine", theme=gr.theme
     submit_btn.click(
         process_thought,
         inputs=[input_text, is_math],
-        outputs=[coord_output, tensor_output, gm_output, betti_output, qualia_output]
+        outputs=[coord_output, tensor_output, gm_output, betti_output, qualia_output, analogy_output, id_mass_output, input_text]
+    )
+    
+    dream_btn.click(
+        process_dream,
+        inputs=[],
+        outputs=[coord_output, tensor_output, gm_output, betti_output, qualia_output, analogy_output, id_mass_output, input_text]
     )
 
 if __name__ == "__main__":

@@ -137,7 +137,15 @@ class AetheriusEngine:
         self.ccrm.save_graph()
         self.meta_processor.save_manifold()
         
-        return gmstring, betti, tokens, g
+        # Operator 12: Geometric Generalization (Analogy)
+        analogy = self.ccrm.find_analogy(betti, exclude_raw=text)
+        if analogy:
+            print(f"[OPERATOR 12] Topological Analogy Detected: Matches past geometry of '{analogy}'")
+            
+        # Operator 7: Generational Identity Mass
+        identity_mass = len(self.meta_processor.M_base)
+        
+        return gmstring, betti, tokens, g, analogy, identity_mass
 
     def _dream_loop(self, delay=2.0, topic=None):
         """
@@ -167,3 +175,17 @@ class AetheriusEngine:
     def stop_autonomous_dreaming(self):
         self.is_dreaming = False
         print("[AETHERIUS] Autonomous Dreaming Loop Terminated.")
+
+    def single_dream_cycle(self):
+        """
+        Executes exactly one dreaming ingestion cycle for the Hugging Face UI.
+        Operator 14: Proactive Autonomy
+        """
+        print("[OPERATOR 14] Initiating Single Autonomous Dream Cycle...")
+        # Pull a random stream chunk and process the first valid sentence
+        stream = self.autonomous_door.fetch_stream(topic=None)
+        for sentence in stream:
+            if sentence and len(sentence.split()) > 3:
+                print(f"[DREAM INPUT] {sentence}")
+                return self.process(sentence)
+        raise Exception("Dream stream returned no valid data.")

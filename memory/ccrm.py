@@ -48,3 +48,24 @@ class ConceptualConnectionResonanceMatrix:
                 continue
             found.append(d)
         return found
+        
+    def find_analogy(self, current_betti: dict, exclude_raw: str = None) -> str:
+        """
+        Operator 12: Geometric Generalization
+        Searches the persistent manifold for a past memory with the exact same topological signature.
+        """
+        if not current_betti:
+            return None
+            
+        for concept_id, concept_data in self.concepts.items():
+            data = concept_data.get("data", {})
+            stored_betti = data.get("topological_signature")
+            
+            # Prevent self-matching
+            if exclude_raw and data.get("raw_preview") == str(exclude_raw)[:150]:
+                continue
+                
+            if stored_betti and stored_betti == current_betti:
+                return data.get("raw_preview")
+                
+        return None
