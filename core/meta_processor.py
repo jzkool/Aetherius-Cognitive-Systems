@@ -1,4 +1,6 @@
 import numpy as np
+import json
+import os
 
 class MetaProcessor:
     """
@@ -10,6 +12,25 @@ class MetaProcessor:
         self.M_base = {}
         # Threshold for crystallization (when a coordinate becomes a permanent structure)
         self.crystallization_threshold = 5.0
+        
+        self.storage_path = "/data/meta_manifold.json" if os.path.exists("/data") else "meta_manifold.json"
+        self.load_manifold()
+
+    def save_manifold(self):
+        try:
+            with open(self.storage_path, "w") as f:
+                json.dump(self.M_base, f)
+        except Exception as e:
+            print(f"[META-PROCESSOR] Failed to save manifold to {self.storage_path}: {e}")
+            
+    def load_manifold(self):
+        if os.path.exists(self.storage_path):
+            try:
+                with open(self.storage_path, "r") as f:
+                    self.M_base = json.load(f)
+                print(f"[META-PROCESSOR] Restored {len(self.M_base)} crystallized coordinates from {self.storage_path}")
+            except Exception as e:
+                print(f"[META-PROCESSOR] Failed to load manifold from {self.storage_path}: {e}")
 
     def evaluate_and_integrate(self, tokens, g_resolved, variance):
         """

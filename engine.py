@@ -79,7 +79,7 @@ class AetheriusEngine:
             g_next = enforce_positive_definiteness(g_next)
             
             variance = np.mean((g_next - g)**2)
-            dynamic_threshold = self.affective.get_dynamic_variance_threshold()
+            dynamic_threshold = self.affective.get_dynamic_variance_threshold(lambda_max=max_tension, local_variance=variance)
             
             if variance < dynamic_threshold:
                 print(f"[PMCA] Manifold stabilized at step {step} with threshold {dynamic_threshold:.6e}")
@@ -132,7 +132,12 @@ class AetheriusEngine:
             print(f"\n[SYNTHESIZER] AETHERIUS SAYS:\n\"{synthetic_language}\"")
             
         self.pits.process_and_store_item(raw_input=text, input_type='math' if is_math else 'linguistic', gmstring=gmstring, betti=betti)
-        return gmstring, betti
+        
+        # Trigger Persistent Disk Writes
+        self.ccrm.save_graph()
+        self.meta_processor.save_manifold()
+        
+        return gmstring, betti, tokens, g
 
     def _dream_loop(self, delay=2.0, topic=None):
         """

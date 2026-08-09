@@ -1,6 +1,34 @@
+import json
+import os
+
 class ConceptualConnectionResonanceMatrix:
     def __init__(self): 
         self.concepts = {}
+        # Try Hugging Face persistent volume first, otherwise local
+        self.storage_path = "/data/ccrm_graph.json" if os.path.exists("/data") else "ccrm_graph.json"
+        self.load_graph()
+        
+    def save_graph(self):
+        try:
+            # Convert sets to lists for JSON serialization
+            serializable = {}
+            for k, v in self.concepts.items():
+                serializable[k] = {"data": v["data"], "tags": list(v["tags"])}
+            with open(self.storage_path, "w") as f:
+                json.dump(serializable, f)
+        except Exception as e:
+            print(f"[CCRM] Failed to save graph to {self.storage_path}: {e}")
+            
+    def load_graph(self):
+        if os.path.exists(self.storage_path):
+            try:
+                with open(self.storage_path, "r") as f:
+                    loaded = json.load(f)
+                for k, v in loaded.items():
+                    self.concepts[k] = {"data": v["data"], "tags": set(v["tags"])}
+                print(f"[CCRM] Restored {len(self.concepts)} persistent memories from {self.storage_path}")
+            except Exception as e:
+                print(f"[CCRM] Failed to load graph from {self.storage_path}: {e}")
     
     def add_concept(self, concept_id: str, data: dict, tags: list = None):
         if concept_id not in self.concepts: 

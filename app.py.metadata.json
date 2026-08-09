@@ -1,4 +1,4 @@
 {
-  "summary": "Added @spaces.GPU decorator to app.py.",
-  "updatedAt": "2026-08-09T16:45:15.694190700Z"
+  "summary": "Rewrote app.py to display raw metric tensors and coordinate axes.",
+  "updatedAt": "2026-08-09T16:55:03.088850400Z"
 }
