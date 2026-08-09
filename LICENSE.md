@@ -21,7 +21,7 @@ c. Any distribution of modified versions is also made available under this same 
 
 Commercial Use of the Software is **not** granted under this License. Any party wishing to use the Software for Commercial Use must obtain a separate commercial license from the copyright holder prior to such use.
 
-To request commercial licensing terms, contact: **[your contact email / business address]**
+To request commercial licensing terms, contact: **j.fleuren@aetheriuscognitivesystems.com**
 
 Use of the Software without a valid commercial license, where such use qualifies as Commercial Use under Section 1, is a violation of this License and of copyright law.
 
