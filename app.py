@@ -1,6 +1,9 @@
 import gradio as gr
+import spaces
 from engine import AetheriusEngine
 engine = AetheriusEngine()
+
+@spaces.GPU
 def process_thought(text, is_math=False):
     try:
         # Run the determinisic mathematical topology engine

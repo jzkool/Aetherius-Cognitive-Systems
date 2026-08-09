@@ -1,4 +1,4 @@
 {
-  "summary": "Updated app.py to bind to Docker networking.",
-  "updatedAt": "2026-08-09T15:59:33.955610900Z"
+  "summary": "Added @spaces.GPU decorator to app.py.",
+  "updatedAt": "2026-08-09T16:45:15.694190700Z"
 }
