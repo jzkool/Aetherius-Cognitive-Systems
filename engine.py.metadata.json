@@ -1,4 +1,4 @@
 {
-  "summary": "Updated AetheriusEngine to dynamically load Word2Vec model on initialization.",
-  "updatedAt": "2026-08-08T16:49:37.295378800Z"
+  "summary": "Integrated the MetaProcessor into AetheriusEngine.",
+  "updatedAt": "2026-08-09T01:27:13.754519100Z"
 }

@@ -23,6 +23,21 @@ class GraphBuilder:
         self.adjacency[t1_idx, t2_idx] = weight
         self.adjacency[t2_idx, t1_idx] = weight
         
+    def get_linguism_modifier(self, pos):
+        """
+        Linguism Coordinate Mapping:
+        Maps parts of speech to geometric operators and scalars.
+        """
+        if pos.startswith('JJ'): # Adjectives -> Curvature adjustments
+            return 1.2
+        elif pos.startswith('RB'): # Adverbs -> Magnitude scalars
+            return 1.1
+        elif pos.startswith('VB'): # Verbs -> Transformations
+            return 1.5
+        elif pos.startswith('NN'): # Nouns -> Stable points
+            return 1.0
+        return 1.0
+        
     def semantic_contrast_predicate(self, word1, word2):
         """
         Implements the formal Semantic Contrast Predicate C(t_i, t_j) 
@@ -60,21 +75,27 @@ class GraphBuilder:
         # Semantic Tension mapping \tau
         for i in range(self.n):
             for j in range(i + 1, self.n):
-                word_i = self.tokens[i]
-                word_j = self.tokens[j]
+                # Unpack Linguism Tuples
+                word_i, pos_i = self.tokens[i]
+                word_j, pos_j = self.tokens[j]
                 
                 weight = self.semantic_contrast_predicate(word_i, word_j)
                 
+                # Apply Linguism Coordinates (Scalars)
+                mod_i = self.get_linguism_modifier(pos_i)
+                mod_j = self.get_linguism_modifier(pos_j)
+                linguism_scalar = mod_i * mod_j
+                
                 if weight < 0:
-                    self.add_edge(i, j, weight)
+                    self.add_edge(i, j, weight * linguism_scalar)
                 elif weight > 0:
-                    self.add_edge(i, j, weight)
+                    self.add_edge(i, j, weight * linguism_scalar)
                 else:
                     # Syntactic Flow +c
                     distance = j - i
                     if distance == 1:
-                        self.add_edge(i, j, 0.5)
+                        self.add_edge(i, j, 0.5 * linguism_scalar)
                     elif distance == 2:
-                        self.add_edge(i, j, 0.2)
+                        self.add_edge(i, j, 0.2 * linguism_scalar)
                         
         return self.adjacency

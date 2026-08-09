@@ -14,6 +14,7 @@ from tda.betti_extractor import extract_betti_numbers
 from tda.language_synthesizer import LanguageSynthesizer
 from core.subconscious import SubconsciousManifold
 from core.affective_manifold import AffectiveManifold
+from core.meta_processor import MetaProcessor
 
 import gensim.downloader as api
 
@@ -26,6 +27,7 @@ class AetheriusEngine:
         self.pits = PatternInterpretationTokenisationStorage(self.ccrm)
         self.subconscious = SubconsciousManifold(self.ccrm)
         self.affective = AffectiveManifold(self.subconscious)
+        self.meta_processor = MetaProcessor()
         
         # Word2Vec Integration
         if w2v_model is None:
@@ -108,6 +110,12 @@ class AetheriusEngine:
         # Print the thermodynamic Qualia state
         qualia = self.affective.get_qualia_state()
         print(f"[QUALIA] State: {qualia['relatable_emotion']} | {qualia['geometric_state']}")
+        
+        # Second Processing Point: Meta-Evaluation and Permanent Coordinate Crystallization
+        if not is_math:
+            goal, crystals = self.meta_processor.evaluate_and_integrate(tokens, g, variance)
+            if crystals:
+                print(f"[META-PROCESSOR] Permanent geometric structures updated. Active Goal: {goal}")
         
         # If mathematically solving, the stabilized g values for the variables represent the solution
         if is_math:

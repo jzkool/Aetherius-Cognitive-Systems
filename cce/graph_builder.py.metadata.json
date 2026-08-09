@@ -1,4 +1,4 @@
 {
-  "summary": "Updated GraphBuilder to compute Semantic Contrast using the Word2Vec similarity.",
-  "updatedAt": "2026-08-08T16:49:30.641969300Z"
+  "summary": "Implemented Linguism coordinates in the Graph Builder.",
+  "updatedAt": "2026-08-09T01:26:48.526938Z"
 }
