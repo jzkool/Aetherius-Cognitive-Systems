@@ -3,6 +3,7 @@ gradio
 gensim
 nltk
 sympy
+wikipedia
 astropy
 matplotlib
 jax

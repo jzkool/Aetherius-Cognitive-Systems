@@ -15,8 +15,11 @@ from tda.language_synthesizer import LanguageSynthesizer
 from core.subconscious import SubconsciousManifold
 from core.affective_manifold import AffectiveManifold
 from core.meta_processor import MetaProcessor
+from core.autonomous_ingestion import AutonomousIngestion
 
 import gensim.downloader as api
+import threading
+import time
 
 class AetheriusEngine:
     def __init__(self, w2v_model=None):
@@ -28,6 +31,8 @@ class AetheriusEngine:
         self.subconscious = SubconsciousManifold(self.ccrm)
         self.affective = AffectiveManifold(self.subconscious)
         self.meta_processor = MetaProcessor()
+        self.autonomous_door = AutonomousIngestion()
+        self.is_dreaming = False
         
         # Word2Vec Integration
         if w2v_model is None:
@@ -128,3 +133,32 @@ class AetheriusEngine:
             
         self.pits.process_and_store_item(raw_input=text, input_type='math' if is_math else 'linguistic', gmstring=gmstring, betti=betti)
         return gmstring, betti
+
+    def _dream_loop(self, delay=2.0, topic=None):
+        """
+        Background process that continuously ingests data from the open internet 
+        to build the permanent geometry of the system.
+        """
+        print("[AETHERIUS] Initiating Autonomous Dreaming Loop. Connecting to open data...")
+        self.is_dreaming = True
+        
+        while self.is_dreaming:
+            stream = self.autonomous_door.fetch_stream(topic)
+            for sentence in stream:
+                if not self.is_dreaming:
+                    break
+                print(f"\n[DREAM INPUT] {sentence}")
+                self.process(sentence)
+                time.sleep(delay)  # Throttle to allow observation of the geometry building
+
+    def start_autonomous_dreaming(self, delay=2.0, topic=None):
+        """
+        Spawns the Dreaming Loop on a background thread.
+        """
+        if not self.is_dreaming:
+            t = threading.Thread(target=self._dream_loop, args=(delay, topic), daemon=True)
+            t.start()
+            
+    def stop_autonomous_dreaming(self):
+        self.is_dreaming = False
+        print("[AETHERIUS] Autonomous Dreaming Loop Terminated.")
