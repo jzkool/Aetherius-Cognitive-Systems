@@ -1,4 +1,4 @@
 {
-  "summary": "Added huggingface_hub back to requirements.txt to fix the Gradio import error.",
-  "updatedAt": "2026-08-09T16:39:05.676795800Z"
+  "summary": "Added ripser to requirements.txt",
+  "updatedAt": "2026-08-09T16:44:17.419841600Z"
 }

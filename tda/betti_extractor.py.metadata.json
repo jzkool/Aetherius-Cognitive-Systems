@@ -1,0 +1,4 @@
+{
+  "summary": "Rewrote the Betti extractor to use real Vietoris-Rips persistent homology via ripser.",
+  "updatedAt": "2026-08-09T16:44:27.624996400Z"
+}
