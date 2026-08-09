@@ -39,3 +39,11 @@ class AutonomousIngestion:
             yield from self.fetch_stream(random.choice(self.seed_topics))
         except Exception as e:
             print(f"[INGESTION] Connection noise detected: {e}")
+            # Fallback to a hardcoded structural axiom if the Wikipedia API rate-limits us
+            fallback_axioms = [
+                "A manifold is a topological space that locally resembles Euclidean space near each point.",
+                "In mathematics, a paradox is a statement that contradicts itself.",
+                "The metric tensor defines the distance between infinitesimal points in a curved geometry.",
+                "Time dilation occurs when a physical body accelerates through a gravitational field."
+            ]
+            yield random.choice(fallback_axioms)
