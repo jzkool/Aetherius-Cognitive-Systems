@@ -28,7 +28,12 @@ def initialize_bucket():
     for directory in directories:
         if not os.path.exists(directory):
             try:
-                os.makedirs(directory)
+                os.makedirs(directory, exist_ok=True)
+                # Drop a hidden file so cloud storage viewers (like Hugging Face) display the empty folder
+                keep_file = os.path.join(directory, ".keep")
+                if not os.path.exists(keep_file):
+                    with open(keep_file, 'w') as f:
+                        f.write("Aetherius Directory Initialized.")
                 print(f"[CONFIG] Initialized persistent directory: {directory}")
             except Exception as e:
                 print(f"[CONFIG] WARNING: Cannot create directory {directory}. Error: {e}")

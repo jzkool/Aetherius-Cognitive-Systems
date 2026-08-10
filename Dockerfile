@@ -20,8 +20,8 @@ COPY . .
 RUN useradd -m -u 1000 user
 
 # 6. UNLOCK THE BUCKET (Permissions Claim)
-# Pre-create the folders while still root so the hardware mount succeeds.
-RUN mkdir -p /data/Memories /data/My_AI_Library && \
+# Pre-create the root data folder and set wide permissions so the python script can build the subdirectories
+RUN mkdir -p /data && \
     chown -R 1000:1000 /data /app && \
     chmod -R 777 /data
 
