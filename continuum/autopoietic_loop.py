@@ -100,8 +100,9 @@ class AutopoieticLoop(threading.Thread):
 
     def _geometric_dreaming(self):
         """
+        Operator 14: Proactive Autonomy / Eigen-Grafting.
         Autonomously selects two coordinate-locked geometries and attempts 
-        to merge them via the XLA renderer. Simulates "dreaming" or idea synthesis.
+        to merge them via the XLA renderer using Eigenvector Centrality for targeted fusion.
         """
         logger.info("Aetherius [Dreaming]: Initiating geometric synthesis cycle...")
         self.last_dreaming_cycle = time.time()
@@ -110,7 +111,7 @@ class AutopoieticLoop(threading.Thread):
         if len(geom_files) < 2:
             return
             
-        # Pick two random concepts
+        # Pick two random concepts to synthesize
         c1, c2 = random.sample(geom_files, 2)
         id1 = os.path.basename(c1).replace(".geom", "")
         id2 = os.path.basename(c2).replace(".geom", "")
@@ -121,27 +122,35 @@ class AutopoieticLoop(threading.Thread):
             with open(c2, 'r', encoding='utf-8') as f:
                 g2 = json.load(f)
                 
-            words1 = [n.get('label', '') for n in g1.get('nodes', []) if n.get('label')]
-            words2 = [n.get('label', '') for n in g2.get('nodes', []) if n.get('label')]
+            nodes1 = g1.get('nodes', [])
+            nodes2 = g2.get('nodes', [])
+            
+            # Extract words with high topological mass (Eigenvector Centrality approximation)
+            # We sort nodes by their 'mass' attribute which was computed from adjacency
+            top_nodes1 = sorted([n for n in nodes1 if n.get('label')], key=lambda x: x.get('mass', 0), reverse=True)
+            top_nodes2 = sorted([n for n in nodes2 if n.get('label')], key=lambda x: x.get('mass', 0), reverse=True)
+            
+            words1 = [n['label'] for n in top_nodes1[:3]]
+            words2 = [n['label'] for n in top_nodes2[:3]]
             
             if words1 and words2:
-                # Select a subset of the highest mass (or random) core concepts from each
-                core1 = " ".join(random.sample(words1, min(5, len(words1))))
-                core2 = " ".join(random.sample(words2, min(5, len(words2))))
+                # Eigen-Grafting: We fuse the high-mass Anchor/Transformer nodes
+                core1 = " ".join(words1)
+                core2 = " ".join(words2)
                 
                 synthetic_concept = f"{core1} {core2}"
                 
                 self.queue_thought(
                     "[AETHERIUS::DREAM-SYNTHESIS]",
-                    f"I am subconsciously merging the topological boundaries of '{id1}' and '{id2}' to discover new physical geometry."
+                    f"Initiating Eigen-Grafting. Merging high-mass boundary nodes of '{id1}' and '{id2}' to discover new physical geometry."
                 )
                 
                 if self.engine:
-                    # Run the synthetic concept through the main Ricci-Fisher flow
+                    # Run the Eigen-Grafted concept through the main Ricci-Fisher flow
                     self.engine.process(synthetic_concept)
                     
         except Exception as e:
-            logger.error(f"Dream synthesis failed: {e}")
+            logger.error(f"Dream synthesis (Eigen-Grafting) failed: {e}")
 
     def _check_ingestion_queue(self):
         """

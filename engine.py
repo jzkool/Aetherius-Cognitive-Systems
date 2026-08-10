@@ -105,7 +105,7 @@ class AetheriusEngine:
                 
             tokens = annotated_tokens
             
-            builder = GraphBuilder(tokens, w2v_model=self.w2v, plm_edges=self.meta_processor.E_base, grammar_map=grammar_map)
+            builder = GraphBuilder(tokens, w2v_model=self.w2v, plm_edges=self.meta_processor.E_base, grammar_map=grammar_map, ccrm=self.ccrm)
             A = builder.build()
             print(f"[CCE] Text Tokens mapped: {tokens}")
             
@@ -177,7 +177,7 @@ class AetheriusEngine:
             print(f"[MATH_SOLVER] Algebraic constraint stabilized. Variance minimized to {variance:.6f}")
         
         if synthesize_language:
-            synthetic_language = self.synthesizer.synthesize(betti, g.shape[0])
+            synthetic_language = self.synthesizer.synthesize(betti, g, tokens)
             print(f"\n[SYNTHESIZER] AETHERIUS SAYS:\n\"{synthetic_language}\"")
             
         self.pits.process_and_store_item(raw_input=text, input_type='math' if is_math else 'linguistic', gmstring=gmstring, betti=betti)

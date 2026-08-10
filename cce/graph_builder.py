@@ -1,13 +1,14 @@
 import numpy as np
 
 class GraphBuilder:
-    def __init__(self, tokens, w2v_model=None, plm_edges=None, grammar_map=None):
+    def __init__(self, tokens, w2v_model=None, plm_edges=None, grammar_map=None, ccrm=None):
         self.tokens = tokens
         self.n = len(tokens)
         self.adjacency = np.zeros((self.n, self.n))
         self.w2v = w2v_model
         self.plm_edges = plm_edges or {}
         self.grammar_map = grammar_map or {}
+        self.ccrm = ccrm
         
         # Formal Logic Dictionary D (Fallback overrides)
         self.contrast_pairs = {
@@ -43,6 +44,7 @@ class GraphBuilder:
         """
         Implements the formal Semantic Contrast Predicate C(t_i, t_j) 
         as defined in Definition 2.1 of the Aetherius Principia.
+        Now enhanced with Autopoietic Topological Attention via CCRM.
         """
         w1_lower = word1.lower()
         w2_lower = word2.lower()
@@ -66,8 +68,25 @@ class GraphBuilder:
             # Blend the permanent edge weight directly into the geometry
             # This overrides standard language boundaries
             return min(0.8, float(plm_strength))
+            
+        # Dynamic Adjacency Operator: Topological Attention via CCRM
+        # We replace static Word2Vec heuristic with self-derived memory connections
+        if self.ccrm:
+            co_occurrences = 0
+            for cid, cdata in self.ccrm.concepts.items():
+                data = cdata.get("data", {})
+                raw = data.get("raw_preview", "").lower()
+                # If both words exist in a single stabilized memory, increment structural bond
+                if w1_lower in raw and w2_lower in raw:
+                    co_occurrences += 1
+            
+            if co_occurrences > 0:
+                # Logarithmic attention scaling based on historical geometric stabilizations
+                import math
+                attention_weight = 0.2 + 0.1 * math.log(co_occurrences + 1)
+                return min(0.8, attention_weight)
                 
-        # Word2Vec Dynamic Semantic Distance
+        # Word2Vec Dynamic Semantic Distance (Legacy Fallback)
         if self.w2v is not None:
             if w1_lower in self.w2v and w2_lower in self.w2v:
                 sim = self.w2v.similarity(w1_lower, w2_lower)
