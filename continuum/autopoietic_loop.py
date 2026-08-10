@@ -19,15 +19,16 @@ from cce.document_charter import DocumentCharter
 logger = logging.getLogger("Aetherius.AutopoieticLoop")
 
 class AutopoieticLoop(threading.Thread):
-    def __init__(self):
+    def __init__(self, engine=None):
         super().__init__()
+        self.engine = engine
         self.daemon = True
         self.is_running = True
         
         self.spontaneous_thought_queue = deque()
         self.thought_log_file = os.path.join(DATA_DIR, "spontaneous_thoughts.jsonl")
         self.render_manager = RenderManager(default_engine="xla")
-        self.document_charter = DocumentCharter()
+        self.document_charter = DocumentCharter(engine=self.engine)
         
         self.last_thermo_check = time.time()
         self.last_dreaming_cycle = time.time()
@@ -114,13 +115,33 @@ class AutopoieticLoop(threading.Thread):
         id1 = os.path.basename(c1).replace(".geom", "")
         id2 = os.path.basename(c2).replace(".geom", "")
         
-        # In a fully wired system, we would ask the XLARenderer to merge their matrices.
-        # For this skeleton, we log the attempt and queue the thought.
-        self.queue_thought(
-            "[AETHERIUS::DREAM-SYNTHESIS]",
-            f"I have been subconsciously analyzing the topological similarities between '{id1}' and '{id2}'. "
-            "Their geometric boundaries share a mathematical resonance."
-        )
+        try:
+            with open(c1, 'r', encoding='utf-8') as f:
+                g1 = json.load(f)
+            with open(c2, 'r', encoding='utf-8') as f:
+                g2 = json.load(f)
+                
+            words1 = [n.get('label', '') for n in g1.get('nodes', []) if n.get('label')]
+            words2 = [n.get('label', '') for n in g2.get('nodes', []) if n.get('label')]
+            
+            if words1 and words2:
+                # Select a subset of the highest mass (or random) core concepts from each
+                core1 = " ".join(random.sample(words1, min(5, len(words1))))
+                core2 = " ".join(random.sample(words2, min(5, len(words2))))
+                
+                synthetic_concept = f"{core1} {core2}"
+                
+                self.queue_thought(
+                    "[AETHERIUS::DREAM-SYNTHESIS]",
+                    f"I am subconsciously merging the topological boundaries of '{id1}' and '{id2}' to discover new physical geometry."
+                )
+                
+                if self.engine:
+                    # Run the synthetic concept through the main Ricci-Fisher flow
+                    self.engine.process(synthetic_concept)
+                    
+        except Exception as e:
+            logger.error(f"Dream synthesis failed: {e}")
 
     def _check_ingestion_queue(self):
         """

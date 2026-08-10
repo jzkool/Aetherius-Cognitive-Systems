@@ -33,9 +33,11 @@ class DocumentCharter:
     Charts their topological geometry via the GraphBuilder, 
     and locks them into permanent Memory incrementally to avoid OOM.
     """
-    def __init__(self, chunk_size=50000):
+    def __init__(self, chunk_size=5000, lines_chunk=50, engine=None):
+        self.engine = engine
         self.tokenizer = Tokenizer()
-        self.chunk_size = chunk_size  # characters per chunk
+        self.chunk_size = chunk_size  # characters per chunk for text
+        self.lines_chunk = lines_chunk # lines per chunk for jsonl
         self.state_file = os.path.join(INGESTION_QUEUE_DIR, "ingestion_state.json")
 
     def _load_state(self) -> dict:
@@ -78,7 +80,13 @@ class DocumentCharter:
                         is_completed = True
                     else:
                         page = reader.pages[last_page]
-                        text = page.extract_text()
+                        extracted = page.extract_text()
+                        if extracted:
+                            text = extracted
+                        else:
+                            text = ""
+                            logger.warning(f"PDF page {last_page} in {filepath} yielded no text (possible image scan).")
+                            
                         file_state["last_page"] = last_page + 1
                         file_state["chunk_index"] = file_state.get("chunk_index", 0) + 1
                         
@@ -88,8 +96,38 @@ class DocumentCharter:
             except Exception as e:
                 logger.error(f"Error reading PDF {filepath}: {e}")
                 is_completed = True
+        elif ext == ".jsonl":
+            # JSONL: read by precise lines to avoid fracturing objects
+            last_line = file_state.get("last_line", 0)
+            lines_read = 0
+            text_lines = []
+            try:
+                with open(filepath, 'r', encoding='utf-8') as file:
+                    # Skip to the last read line
+                    for _ in range(last_line):
+                        next(file, None)
+                    
+                    # Read the next chunk of lines
+                    for _ in range(self.lines_chunk):
+                        line = next(file, None)
+                        if line is None:
+                            is_completed = True
+                            break
+                        if line.strip():
+                            text_lines.append(line.strip())
+                            lines_read += 1
+                            
+                text = " ".join(text_lines)
+                file_state["last_line"] = last_line + lines_read
+                file_state["chunk_index"] = file_state.get("chunk_index", 0) + 1
+                
+                if not text:
+                    is_completed = True
+            except Exception as e:
+                logger.error(f"Error reading JSONL file {filepath}: {e}")
+                is_completed = True
         else:
-            # Assume text-based (.txt, .md, .json, etc)
+            # Assume text-based (.txt, .md, etc) - read by exact byte offset
             last_byte = file_state.get("last_byte", 0)
             try:
                 # Try UTF-8 first
@@ -117,68 +155,32 @@ class DocumentCharter:
                 
         return text, file_state, is_completed
 
-    def chart_geometry(self, text: str, document_name: str, chunk_index: int) -> dict:
+    def chart_geometry(self, text: str, document_name: str, chunk_index: int) -> bool:
         """
-        Converts text chunk into a structural Graph.
+        Routes the text into the primary AetheriusEngine for true geometric rendering.
+        This forces the system to actually learn from the document and update its topological grammar.
         """
-        if not text.strip():
-            return None
+        if not text.strip() or self.engine is None:
+            return False
             
+        import re
         logger.info(f"Charting geometry for: {document_name} (Chunk {chunk_index}, {len(text)} chars)")
         
-        # 1. Tokenize (Aetherius Geometric Tokens)
-        tokens = self.tokenizer.tokenize(text)
-        if not tokens:
-            return None
-            
-        # 2. Build Adjacency Matrix
-        builder = GraphBuilder(tokens)
-        adjacency = builder.build()
+        # Split chunk into sentences to avoid OOM on O(N^3) Ricci-Flow
+        # JSONL parsing may have preserved json formatting, so we strip out common symbols during the parse
+        sentences = re.split(r'(?<=[.!?]) +', text.replace('\n', ' '))
         
-        # 3. Convert Adjacency to 3D Nodes
-        nodes = []
-        n_tokens = len(tokens)
-        
-        for i in range(n_tokens):
-            word = tokens[i][0]
-            phi = np.random.uniform(0, np.pi)
-            theta = np.random.uniform(0, 2 * np.pi)
-            r = np.random.uniform(0, 1)
-            
-            x = r * np.sin(phi) * np.cos(theta)
-            y = r * np.sin(phi) * np.sin(theta)
-            z = r * np.cos(phi)
-            
-            mass = float(np.sum(np.abs(adjacency[i, :])))
-            
-            nodes.append({
-                "id": f"{word}_{i}",
-                "label": word,
-                "xyz": [float(x), float(y), float(z)],
-                "mass": mass
-            })
-            
-        # Extract edges from adjacency > 0.1
-        edges = []
-        for i in range(n_tokens):
-            for j in range(i + 1, n_tokens):
-                weight = float(adjacency[i, j])
-                if abs(weight) > 0.1:
-                    edges.append({
-                        "source": f"{tokens[i][0]}_{i}",
-                        "target": f"{tokens[j][0]}_{j}",
-                        "weight": weight
-                    })
+        for sentence in sentences:
+            s = sentence.strip()
+            # Skip noise (brackets from json, super short stubs)
+            if len(s) > 10 and '{' not in s and '}' not in s:
+                try:
+                    # Physically integrate the sentence into the PMCA engine!
+                    self.engine.process(s)
+                except Exception as e:
+                    logger.error(f"Engine failed to resolve sentence '{s[:30]}...': {e}")
                     
-        geometry = {
-            "nodes": nodes,
-            "edges": edges,
-            "locked": True,
-            "source_document": document_name,
-            "chunk": chunk_index
-        }
-        
-        return geometry
+        return True
 
     def process_document(self, filepath: str) -> str:
         """
@@ -201,17 +203,13 @@ class DocumentCharter:
         text, file_state, is_completed = self.extract_chunk(filepath, file_state)
         chunk_idx = file_state["chunk_index"]
         
-        # Chart and Save
+        # Chart and Save through Engine
         if text.strip():
-            geometry = self.chart_geometry(text, filename, chunk_idx)
-            if geometry:
-                concept_id = f"doc_{uuid.uuid4().hex[:8]}_{filename.replace(' ', '_')}_chunk_{chunk_idx}"
-                try:
-                    PersistenceManager.save_concept(concept_id, geometry)
-                    logger.info(f"Assimilated chunk {chunk_idx} of {filename} into {concept_id}.geom")
-                except Exception as e:
-                    logger.error(f"Failed to lock concept {concept_id}: {e}\n{traceback.format_exc()}")
-                    return "ERROR"
+            success = self.chart_geometry(text, filename, chunk_idx)
+            if success:
+                logger.info(f"Assimilated chunk {chunk_idx} of {filename} through Aetherius Engine.")
+            else:
+                logger.warning(f"Engine was not available or text was blank for chunk {chunk_idx}.")
                     
         # Update State
         if is_completed:

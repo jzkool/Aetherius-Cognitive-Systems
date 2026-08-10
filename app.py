@@ -16,7 +16,7 @@ def start_daemon_safely():
     with daemon_lock:
         if continuum_daemon is None:
             print("[APP] Starting Autopoietic Continuum Daemon safely after event loop initialization...")
-            continuum_daemon = AutopoieticLoop()
+            continuum_daemon = AutopoieticLoop(engine=engine)
             continuum_daemon.start()
 
 def format_ui_outputs(gmstring, betti, tokens, g, analogy, identity_mass):
