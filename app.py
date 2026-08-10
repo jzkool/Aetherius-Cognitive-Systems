@@ -2,7 +2,13 @@ import gradio as gr
 import spaces
 import numpy as np
 from engine import AetheriusEngine
+from continuum.autopoietic_loop import AutopoieticLoop
+
 engine = AetheriusEngine()
+
+# Ignite the background autopoietic daemon
+continuum_daemon = AutopoieticLoop()
+continuum_daemon.start()
 
 def format_ui_outputs(gmstring, betti, tokens, g, analogy, identity_mass):
     # Format the Coordinate Mapping
