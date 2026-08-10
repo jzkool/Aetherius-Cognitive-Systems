@@ -16,10 +16,11 @@ GEOMETRIC_DIR    = os.path.join(SAFE_BASE, "Memories/Geometric_Constructs/")
 THERMO_DIR       = os.path.join(SAFE_BASE, "Memories/Thermodynamic_States/")
 LANGUAGE_DIR     = os.path.join(SAFE_BASE, "Memories/Language_Manifold/")
 RENDER_CACHE_DIR = os.path.join(SAFE_BASE, "Memories/Render_Cache/")
+INGESTION_QUEUE_DIR = os.path.join(SAFE_BASE, "Memories/Ingestion_Queue/")
 
 # Ensure directories exist
 def initialize_bucket():
-    directories = [DATA_DIR, LIBRARY_DIR, PAINTINGS_DIR, MUSIC_DIR, SUBCONSCIOUS_DIR, BRAIN_DIR, GEOMETRIC_DIR, THERMO_DIR, LANGUAGE_DIR, RENDER_CACHE_DIR]
+    directories = [DATA_DIR, LIBRARY_DIR, PAINTINGS_DIR, MUSIC_DIR, SUBCONSCIOUS_DIR, BRAIN_DIR, GEOMETRIC_DIR, THERMO_DIR, LANGUAGE_DIR, RENDER_CACHE_DIR, INGESTION_QUEUE_DIR]
     for directory in directories:
         if not os.path.exists(directory):
             try:

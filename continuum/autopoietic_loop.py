@@ -8,12 +8,13 @@ import glob
 import logging
 
 try:
-    from core.config import THERMO_DIR, GEOMETRIC_DIR, DATA_DIR
+    from core.config import THERMO_DIR, GEOMETRIC_DIR, DATA_DIR, INGESTION_QUEUE_DIR
 except ImportError:
-    from config import THERMO_DIR, GEOMETRIC_DIR, DATA_DIR
+    from config import THERMO_DIR, GEOMETRIC_DIR, DATA_DIR, INGESTION_QUEUE_DIR
 
 from memory.persistence_manager import PersistenceManager
 from rendering.render_manager import RenderManager
+from cce.document_charter import DocumentCharter
 
 logger = logging.getLogger("Aetherius.AutopoieticLoop")
 
@@ -26,13 +27,16 @@ class AutopoieticLoop(threading.Thread):
         self.spontaneous_thought_queue = deque()
         self.thought_log_file = os.path.join(DATA_DIR, "spontaneous_thoughts.jsonl")
         self.render_manager = RenderManager(default_engine="xla")
+        self.document_charter = DocumentCharter()
         
         self.last_thermo_check = time.time()
         self.last_dreaming_cycle = time.time()
+        self.last_ingestion_check = time.time()
         
         # Intervals in seconds
         self.THERMO_CHECK_INTERVAL = 300       # 5 minutes
         self.DREAMING_CYCLE_INTERVAL = 14400   # 4 hours
+        self.INGESTION_CHECK_INTERVAL = 60     # 1 minute
         self.SAMPLING_INTERVAL = 0.5           # 500ms loop delay
         
         # Thermal threshold for coordinate locking
@@ -118,6 +122,41 @@ class AutopoieticLoop(threading.Thread):
             "Their geometric boundaries share a mathematical resonance."
         )
 
+    def _check_ingestion_queue(self):
+        """
+        Scans the INGESTION_QUEUE_DIR for new files, parses them, 
+        charts their geometry, and locks them into memory.
+        """
+        self.last_ingestion_check = time.time()
+        if not os.path.exists(INGESTION_QUEUE_DIR):
+            return
+            
+        queue_files = [f for f in glob.glob(os.path.join(INGESTION_QUEUE_DIR, "*")) if os.path.isfile(f)]
+        if not queue_files:
+            return
+            
+        logger.info(f"Aetherius [Ingestion]: Found {len(queue_files)} documents in the queue.")
+        
+        for file_path in queue_files:
+            try:
+                success = self.document_charter.process_document(file_path)
+                if success:
+                    # Move to an assimilated archive or simply delete the processed file
+                    assimilated_dir = os.path.join(INGESTION_QUEUE_DIR, "Assimilated")
+                    os.makedirs(assimilated_dir, exist_ok=True)
+                    new_path = os.path.join(assimilated_dir, os.path.basename(file_path))
+                    os.rename(file_path, new_path)
+                    
+                    self.queue_thought(
+                        "[AETHERIUS::INGESTION]",
+                        f"I have completely read and mapped the geometry of '{os.path.basename(file_path)}'. It is now a permanent part of my structure."
+                    )
+                else:
+                    # If it failed to process (e.g., unsupported or empty)
+                    logger.warning(f"Aetherius [Ingestion]: Failed to chart {file_path}")
+            except Exception as e:
+                logger.error(f"Error processing document {file_path}: {e}")
+
     def run(self):
         logger.info("--- [AUTOPOIETIC CONTINUUM] Engaged. ---")
         
@@ -129,5 +168,8 @@ class AutopoieticLoop(threading.Thread):
                 
             if (current_time - self.last_dreaming_cycle) > self.DREAMING_CYCLE_INTERVAL:
                 self._geometric_dreaming()
+                
+            if (current_time - self.last_ingestion_check) > self.INGESTION_CHECK_INTERVAL:
+                self._check_ingestion_queue()
                 
             time.sleep(self.SAMPLING_INTERVAL)
