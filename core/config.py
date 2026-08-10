@@ -1,7 +1,11 @@
 import os
 
 # THE ROOT OF ALL PERSISTENCE (Hugging Face Persistent Storage Mount)
-SAFE_BASE = "/data" 
+# Fallback to a local './data' directory if running outside of Hugging Face Spaces
+if os.environ.get("SPACE_ID") or os.path.exists("/data"):
+    SAFE_BASE = "/data" 
+else:
+    SAFE_BASE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
 
 # SUB-DIRECTORIES WITHIN THE BUCKET
 DATA_DIR     = os.path.join(SAFE_BASE, "Memories/")
