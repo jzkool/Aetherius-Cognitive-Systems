@@ -34,11 +34,11 @@ def format_ui_outputs(gmstring, betti, tokens, g, analogy, identity_mass):
     return coord_string, tensor_string, gmstring['checksum'], topology_signature, qualia_output, analogy_out, id_mass_out
 
 @spaces.GPU
-def process_thought(text, is_math=False):
+def process_thought(text):
     try:
         if not text.strip():
             raise Exception("Input cannot be empty.")
-        gmstring, betti, tokens, g, analogy, identity_mass = engine.process(text, is_math=is_math)
+        gmstring, betti, tokens, g, analogy, identity_mass = engine.process(text)
         return format_ui_outputs(gmstring, betti, tokens, g, analogy, identity_mass) + (gr.update(),)
     except Exception as e:
         return f"Error: {str(e)}", "Error", "Error", "N/A", "N/A", "N/A", "N/A", gr.update()
@@ -62,7 +62,6 @@ with gr.Blocks(title="Aetherius: Computational Cognition Engine", theme=gr.theme
     with gr.Row():
         with gr.Column(scale=1):
             input_text = gr.Textbox(label="Enter a logical statement, paradox, or thought", lines=3, placeholder="e.g., This statement is false.")
-            is_math = gr.Checkbox(label="Is this a mathematical equation?")
             
             with gr.Row():
                 submit_btn = gr.Button("Resolve Geometry", variant="primary")
@@ -90,7 +89,7 @@ with gr.Blocks(title="Aetherius: Computational Cognition Engine", theme=gr.theme
             
     submit_btn.click(
         process_thought,
-        inputs=[input_text, is_math],
+        inputs=[input_text],
         outputs=[coord_output, tensor_output, gm_output, betti_output, qualia_output, analogy_output, id_mass_output, input_text]
     )
     

@@ -13,7 +13,7 @@ class MetaProcessor:
         # Threshold for crystallization (when a coordinate becomes a permanent structure)
         self.crystallization_threshold = 5.0
         
-        self.storage_path = "/data/meta_manifold.json" if os.path.exists("/data") else "meta_manifold.json"
+        self.storage_path = "./data/meta_manifold.json" if os.path.exists("./data") else "meta_manifold.json"
         self.load_manifold()
 
     def save_manifold(self):

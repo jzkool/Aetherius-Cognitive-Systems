@@ -1,4 +1,4 @@
 {
-  "summary": "Rewrote meta_processor.py to include persistent JSON disk storage.",
-  "updatedAt": "2026-08-09T16:56:11.503431600Z"
+  "summary": "Fixed Hugging Face persistent volume path to ./data in meta_processor.py.",
+  "updatedAt": "2026-08-10T13:34:55.149794700Z"
 }

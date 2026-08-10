@@ -1,4 +1,4 @@
 {
-  "summary": "Rewrote app.py to expose Operators 7, 12, and 14 in the UI.",
-  "updatedAt": "2026-08-09T17:09:38.999243Z"
+  "summary": "Removed is_math checkbox from app.py.",
+  "updatedAt": "2026-08-10T13:34:23.769278600Z"
 }

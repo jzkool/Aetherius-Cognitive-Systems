@@ -45,9 +45,32 @@ class AetheriusEngine:
                 self.w2v = None
         else:
             self.w2v = w2v_model
+            
+    def _is_mathematical(self, text):
+        """
+        Autonomous Differentiator (Heuristic).
+        Detects if the input is a mathematical/algebraic structure rather than natural language.
+        """
+        math_symbols = {'+', '-', '=', '*', '/', '^', '\\', 'int', 'sum', 'infty'}
+        # Count density of math symbols and digits vs alphabetic characters
+        symbol_count = sum(1 for char in text if char in math_symbols or char.isdigit())
+        total_chars = len(text.replace(" ", ""))
         
-    def process(self, text, custom_adjacency=None, is_math=False, synthesize_language=False):
+        if total_chars == 0:
+            return False
+            
+        ratio = symbol_count / total_chars
+        # If more than 15% of the string is math symbols/numbers, classify as math
+        if ratio > 0.15 or "=" in text:
+            print("[DIFFERENTIATOR] Mathematical structure detected. Routing to PMCA Math Core.")
+            return True
+        return False
+        
+    def process(self, text, custom_adjacency=None, synthesize_language=False):
         print(f"[Engine] Processing input: '{text}'")
+        
+        # Autonomously differentiate logic
+        is_math = self._is_mathematical(text)
         
         if is_math:
             builder = MathBuilder(text)

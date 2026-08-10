@@ -5,7 +5,7 @@ class ConceptualConnectionResonanceMatrix:
     def __init__(self): 
         self.concepts = {}
         # Try Hugging Face persistent volume first, otherwise local
-        self.storage_path = "/data/ccrm_graph.json" if os.path.exists("/data") else "ccrm_graph.json"
+        self.storage_path = "./data/ccrm_graph.json" if os.path.exists("./data") else "ccrm_graph.json"
         self.load_graph()
         
     def save_graph(self):
