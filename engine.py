@@ -78,7 +78,7 @@ class AetheriusEngine:
             print(f"[CCE] Math Equation mapped: {tokens}")
         else:
             tokens = self.tokenizer.tokenize(text)
-            builder = GraphBuilder(tokens, w2v_model=self.w2v)
+            builder = GraphBuilder(tokens, w2v_model=self.w2v, plm_edges=self.meta_processor.E_base)
             print(f"[CCE] Text Tokens mapped: {tokens}")
             
         if custom_adjacency is not None:

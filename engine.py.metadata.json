@@ -1,4 +1,4 @@
 {
-  "summary": "Added autonomous InputClassifier and updated engine routing.",
-  "updatedAt": "2026-08-10T13:34:00.248200300Z"
+  "summary": "Fixed MathBuilder instantiation in engine.py.",
+  "updatedAt": "2026-08-10T13:44:57.098428800Z"
 }

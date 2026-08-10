@@ -1,4 +1,4 @@
 {
-  "summary": "Implemented Linguism coordinates in the Graph Builder.",
-  "updatedAt": "2026-08-09T01:26:48.526938Z"
+  "summary": "Updated GraphBuilder to accept the Persistent Language Manifold edges and blend them into geometry calculations.",
+  "updatedAt": "2026-08-10T13:44:20.362988Z"
 }

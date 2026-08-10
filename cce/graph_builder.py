@@ -1,11 +1,12 @@
 import numpy as np
 
 class GraphBuilder:
-    def __init__(self, tokens, w2v_model=None):
+    def __init__(self, tokens, w2v_model=None, plm_edges=None):
         self.tokens = tokens
         self.n = len(tokens)
         self.adjacency = np.zeros((self.n, self.n))
         self.w2v = w2v_model
+        self.plm_edges = plm_edges or {}
         
         # Formal Logic Dictionary D (Fallback overrides)
         self.contrast_pairs = {
@@ -56,6 +57,15 @@ class GraphBuilder:
         for pair in self.contrast_pairs:
             if (w1_lower == pair[0] and w2_lower == pair[1]) or (w1_lower == pair[1] and w2_lower == pair[0]):
                 return -0.9
+                
+        # Autopoietic Feedback (Persistent Language Manifold)
+        w_a, w_b = min(w1_lower, w2_lower), max(w1_lower, w2_lower)
+        plm_strength = self.plm_edges.get(w_a, {}).get(w_b, 0.0)
+        
+        if plm_strength > 0.0:
+            # Blend the permanent edge weight directly into the geometry
+            # This overrides standard language boundaries
+            return min(0.8, float(plm_strength))
                 
         # Word2Vec Dynamic Semantic Distance
         if self.w2v is not None:

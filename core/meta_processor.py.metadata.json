@@ -1,4 +1,4 @@
 {
-  "summary": "Reverted MetaProcessor to use the Persistent Storage Bucket instead of Dataset API.",
-  "updatedAt": "2026-08-10T13:38:13.163760700Z"
+  "summary": "Updated MetaProcessor to handle the Persistent Language Manifold.",
+  "updatedAt": "2026-08-10T13:43:52.726133300Z"
 }
