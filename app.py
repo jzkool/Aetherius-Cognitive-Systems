@@ -1,14 +1,23 @@
 import gradio as gr
 import spaces
 import numpy as np
+import threading
 from engine import AetheriusEngine
 from continuum.autopoietic_loop import AutopoieticLoop
 
 engine = AetheriusEngine()
 
-# Ignite the background autopoietic daemon
-continuum_daemon = AutopoieticLoop()
-continuum_daemon.start()
+# Global daemon tracking to prevent asyncio/uvicorn startup crashes
+continuum_daemon = None
+daemon_lock = threading.Lock()
+
+def start_daemon_safely():
+    global continuum_daemon
+    with daemon_lock:
+        if continuum_daemon is None:
+            print("[APP] Starting Autopoietic Continuum Daemon safely after event loop initialization...")
+            continuum_daemon = AutopoieticLoop()
+            continuum_daemon.start()
 
 def format_ui_outputs(gmstring, betti, tokens, g, analogy, identity_mass):
     # Format the Coordinate Mapping
@@ -61,7 +70,7 @@ def process_dream():
     except Exception as e:
         return f"Error: {str(e)}", "Error", "Error", "N/A", "N/A", "N/A", "N/A", gr.update()
 
-with gr.Blocks(title="Aetherius: Computational Cognition Engine", theme=gr.themes.Soft()) as demo:
+with gr.Blocks(title="Aetherius: Computational Cognition Engine") as demo:
     gr.Markdown("# 🌌 Aetherius Cognitive Systems")
     gr.Markdown("Welcome to the **Aetherius Engine**. This system doesn't predict next tokens. It maps your input into a geometric manifold, applies a Ricci-Fisher flow operator, and stabilizes the topological structure into absolute mathematical reality.")
     
@@ -104,6 +113,9 @@ with gr.Blocks(title="Aetherius: Computational Cognition Engine", theme=gr.theme
         inputs=[],
         outputs=[coord_output, tensor_output, gm_output, betti_output, qualia_output, analogy_output, id_mass_output, input_text]
     )
+    
+    # Safely start the daemon when the UI loads for the first time
+    demo.load(start_daemon_safely, inputs=None, outputs=None)
 
 if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0", server_port=7860)
+    demo.launch(server_name="0.0.0.0", server_port=7860, theme=gr.themes.Soft())
