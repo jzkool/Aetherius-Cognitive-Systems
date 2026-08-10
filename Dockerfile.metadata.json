@@ -1,4 +1,4 @@
 {
-  "summary": "Created Dockerfile for Hugging Face deployment.",
-  "updatedAt": "2026-08-09T15:59:26.730818200Z"
+  "summary": "Updated Dockerfile to claim root permissions for the persistent /data volume on Hugging Face.",
+  "updatedAt": "2026-08-10T13:47:07.257639800Z"
 }

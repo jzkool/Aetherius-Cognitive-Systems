@@ -1,6 +1,7 @@
 import numpy as np
 import json
 import os
+from core.config import BRAIN_DIR
 
 class MetaProcessor:
     """
@@ -15,17 +16,9 @@ class MetaProcessor:
         # Threshold for crystallization (when a coordinate becomes a permanent structure)
         self.crystallization_threshold = 5.0
         
-        self.bucket_dir = "./data"
-        self.storage_path = os.path.join(self.bucket_dir, "meta_manifold.json")
-        self.edge_storage_path = os.path.join(self.bucket_dir, "language_manifold.json")
+        self.storage_path = os.path.join(BRAIN_DIR, "meta_manifold.json")
+        self.edge_storage_path = os.path.join(BRAIN_DIR, "language_manifold.json")
         
-        # Ensure the persistent bucket directory exists before trying to write to it
-        if not os.path.exists(self.bucket_dir):
-            try:
-                os.makedirs(self.bucket_dir)
-            except Exception as e:
-                pass
-                
         self.load_manifold()
 
     def save_manifold(self):

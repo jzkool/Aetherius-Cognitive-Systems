@@ -16,6 +16,18 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application code
 COPY . .
 
+# Create a non-root user that Hugging Face Spaces expects
+RUN useradd -m -u 1000 user
+
+# 6. UNLOCK THE BUCKET (Permissions Claim)
+# Pre-create the folders while still root so the hardware mount succeeds.
+RUN mkdir -p /data/Memories /data/My_AI_Library && \
+    chown -R 1000:1000 /data /app && \
+    chmod -R 777 /data
+
+# Switch to the non-root user
+USER user
+
 # Expose the standard Gradio port (Hugging Face Spaces defaults to 7860)
 EXPOSE 7860
 ENV PORT=7860

@@ -1,4 +1,4 @@
 {
-  "summary": "Updated MetaProcessor to handle the Persistent Language Manifold.",
-  "updatedAt": "2026-08-10T13:43:52.726133300Z"
+  "summary": "Updated MetaProcessor to use the centralized config paths for bucket storage.",
+  "updatedAt": "2026-08-10T13:47:58.013484Z"
 }

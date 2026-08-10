@@ -1,20 +1,11 @@
 import json
 import os
+from core.config import DATA_DIR
 
 class ConceptualConnectionResonanceMatrix:
     def __init__(self): 
         self.concepts = {}
-        self.bucket_dir = "./data"
-        self.storage_path = os.path.join(self.bucket_dir, "ccrm_graph.json")
-        
-        # Ensure the persistent bucket directory exists before trying to write to it
-        if not os.path.exists(self.bucket_dir):
-            try:
-                os.makedirs(self.bucket_dir)
-                print(f"[CCRM] Initialized persistent storage bucket at {self.bucket_dir}")
-            except Exception as e:
-                print(f"[CCRM] WARNING: Cannot create bucket directory {self.bucket_dir}. Error: {e}")
-                
+        self.storage_path = os.path.join(DATA_DIR, "ccrm_graph.json")
         self.load_graph()
         
     def save_graph(self):
