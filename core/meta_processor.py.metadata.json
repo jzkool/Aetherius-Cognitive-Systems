@@ -1,4 +1,4 @@
 {
-  "summary": "Fixed Hugging Face persistent volume path to ./data in meta_processor.py.",
-  "updatedAt": "2026-08-10T13:34:55.149794700Z"
+  "summary": "Reverted MetaProcessor to use the Persistent Storage Bucket instead of Dataset API.",
+  "updatedAt": "2026-08-10T13:38:13.163760700Z"
 }

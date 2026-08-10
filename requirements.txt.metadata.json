@@ -1,4 +1,4 @@
 {
-  "summary": "Added spaces dependency to requirements.txt",
-  "updatedAt": "2026-08-09T16:45:21.337156300Z"
+  "summary": "Removed huggingface_hub from requirements",
+  "updatedAt": "2026-08-10T13:38:43.022266100Z"
 }

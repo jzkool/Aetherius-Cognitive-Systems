@@ -13,24 +13,39 @@ class MetaProcessor:
         # Threshold for crystallization (when a coordinate becomes a permanent structure)
         self.crystallization_threshold = 5.0
         
-        self.storage_path = "./data/meta_manifold.json" if os.path.exists("./data") else "meta_manifold.json"
+        self.bucket_dir = "./data"
+        self.storage_path = os.path.join(self.bucket_dir, "meta_manifold.json")
+        
+        # Ensure the persistent bucket directory exists before trying to write to it
+        if not os.path.exists(self.bucket_dir):
+            try:
+                os.makedirs(self.bucket_dir)
+            except Exception as e:
+                pass
+                
         self.load_manifold()
 
     def save_manifold(self):
         try:
             with open(self.storage_path, "w") as f:
                 json.dump(self.M_base, f)
+            print(f"[META-PROCESSOR] Successfully saved manifold to persistent bucket: {self.storage_path}")
         except Exception as e:
-            print(f"[META-PROCESSOR] Failed to save manifold to {self.storage_path}: {e}")
+            print(f"[META-PROCESSOR] CRITICAL FAILURE: Cannot write to persistent bucket. Error: {e}")
             
     def load_manifold(self):
+        loaded = None
         if os.path.exists(self.storage_path):
             try:
                 with open(self.storage_path, "r") as f:
-                    self.M_base = json.load(f)
-                print(f"[META-PROCESSOR] Restored {len(self.M_base)} crystallized coordinates from {self.storage_path}")
+                    loaded = json.load(f)
+                print(f"[META-PROCESSOR] Successfully loaded persistent manifold from bucket.")
             except Exception as e:
-                print(f"[META-PROCESSOR] Failed to load manifold from {self.storage_path}: {e}")
+                print(f"[META-PROCESSOR] Failed to load from persistent bucket: {e}")
+                
+        if loaded:
+            self.M_base = loaded
+            print(f"[META-PROCESSOR] Restored {len(self.M_base)} crystallized coordinates.")
 
     def evaluate_and_integrate(self, tokens, g_resolved, variance):
         """

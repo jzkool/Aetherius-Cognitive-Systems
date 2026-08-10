@@ -4,31 +4,46 @@ import os
 class ConceptualConnectionResonanceMatrix:
     def __init__(self): 
         self.concepts = {}
-        # Try Hugging Face persistent volume first, otherwise local
-        self.storage_path = "./data/ccrm_graph.json" if os.path.exists("./data") else "ccrm_graph.json"
+        self.bucket_dir = "./data"
+        self.storage_path = os.path.join(self.bucket_dir, "ccrm_graph.json")
+        
+        # Ensure the persistent bucket directory exists before trying to write to it
+        if not os.path.exists(self.bucket_dir):
+            try:
+                os.makedirs(self.bucket_dir)
+                print(f"[CCRM] Initialized persistent storage bucket at {self.bucket_dir}")
+            except Exception as e:
+                print(f"[CCRM] WARNING: Cannot create bucket directory {self.bucket_dir}. Error: {e}")
+                
         self.load_graph()
         
     def save_graph(self):
+        # Convert sets to lists for JSON serialization
+        serializable = {}
+        for k, v in self.concepts.items():
+            serializable[k] = {"data": v["data"], "tags": list(v["tags"])}
+            
         try:
-            # Convert sets to lists for JSON serialization
-            serializable = {}
-            for k, v in self.concepts.items():
-                serializable[k] = {"data": v["data"], "tags": list(v["tags"])}
             with open(self.storage_path, "w") as f:
                 json.dump(serializable, f)
+            print(f"[CCRM] Successfully saved memory to persistent bucket: {self.storage_path}")
         except Exception as e:
-            print(f"[CCRM] Failed to save graph to {self.storage_path}: {e}")
-            
+            print(f"[CCRM] CRITICAL FAILURE: Cannot write to persistent bucket. Error: {e}")
+
     def load_graph(self):
+        loaded = None
         if os.path.exists(self.storage_path):
             try:
                 with open(self.storage_path, "r") as f:
                     loaded = json.load(f)
-                for k, v in loaded.items():
-                    self.concepts[k] = {"data": v["data"], "tags": set(v["tags"])}
-                print(f"[CCRM] Restored {len(self.concepts)} persistent memories from {self.storage_path}")
+                print(f"[CCRM] Successfully loaded persistent memory from bucket.")
             except Exception as e:
-                print(f"[CCRM] Failed to load graph from {self.storage_path}: {e}")
+                print(f"[CCRM] Failed to load from persistent bucket: {e}")
+                
+        if loaded:
+            for k, v in loaded.items():
+                self.concepts[k] = {"data": v["data"], "tags": set(v["tags"])}
+            print(f"[CCRM] Restored {len(self.concepts)} persistent concepts.")
     
     def add_concept(self, concept_id: str, data: dict, tags: list = None):
         if concept_id not in self.concepts: 

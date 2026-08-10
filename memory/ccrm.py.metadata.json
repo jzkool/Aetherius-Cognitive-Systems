@@ -1,4 +1,4 @@
 {
-  "summary": "Fixed Hugging Face persistent volume path to ./data.",
-  "updatedAt": "2026-08-10T13:34:55.064703400Z"
+  "summary": "Reverted CCRM to use the Persistent Storage Bucket instead of Dataset API.",
+  "updatedAt": "2026-08-10T13:38:13.067540900Z"
 }
