@@ -74,7 +74,14 @@ class AetheriusEngine:
         
         if is_math:
             builder = MathBuilder(text)
-            tokens = builder.tokens
+            # Ensure math tokens are tuples for the UI
+            tokens = [(t, "MATH_NODE") for t in builder.tokens]
+            # GraphBuilder/MathBuilder doesn't natively use tuples in its builder right now, 
+            # wait, MathBuilder uses self.tokens directly. If we change it to tuples here, MathBuilder's build() will fail.
+            # Let's instantiate MathBuilder first, then map tokens for UI.
+            builder = MathBuilder(text)
+            A = builder.build()
+            tokens = [(t, "MATH_NODE") for t in builder.tokens]
             print(f"[CCE] Math Equation mapped: {tokens}")
         else:
             tokens = self.tokenizer.tokenize(text)
@@ -82,13 +89,28 @@ class AetheriusEngine:
             # Derive the autopoietic Geometric Grammar from the Persistent Language Manifold
             grammar_map = self.meta_processor.get_geometric_grammar()
             
+            # Map the engine's physical topology back into human-readable labels for the UI
+            annotated_tokens = []
+            for word, _ in tokens:
+                scalar = grammar_map.get(word, 1.0)
+                if scalar == 1.5:
+                    tag = "TRANSFORMER"
+                elif scalar == 1.0 and word in grammar_map:
+                    tag = "ANCHOR"
+                elif scalar == 1.2:
+                    tag = "MODIFIER"
+                else:
+                    tag = "UNDEFINED_GEOMETRY"
+                annotated_tokens.append((word, tag))
+                
+            tokens = annotated_tokens
+            
             builder = GraphBuilder(tokens, w2v_model=self.w2v, plm_edges=self.meta_processor.E_base, grammar_map=grammar_map)
+            A = builder.build()
             print(f"[CCE] Text Tokens mapped: {tokens}")
             
         if custom_adjacency is not None:
-            builder.adjacency = custom_adjacency
-            
-        A = builder.build()
+            A = custom_adjacency
         L, _ = compute_laplacian(A)
         _, max_tension = compute_tension(L)
         print(f"[CCE] Laplacian computed. Max Tension: {max_tension:.4f}")
