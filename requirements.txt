@@ -2,7 +2,7 @@ numpy
 huggingface_hub
 gradio
 gensim
-nltk
+networkx
 ripser
 spaces
 sympy

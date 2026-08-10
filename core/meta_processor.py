@@ -1,6 +1,7 @@
 import numpy as np
 import json
 import os
+import networkx as nx
 from core.config import BRAIN_DIR
 
 class MetaProcessor:
@@ -106,6 +107,9 @@ class MetaProcessor:
                         self.E_base[w_a][w_b] = strength
                     else:
                         self.E_base[w_a][w_b] += strength
+                        
+        # Optionally trigger a recalculation of the grammar topology if massive crystallization occurs
+        # For now, it calculates on-the-fly when requested by GraphBuilder
                     
         # Meta-Goal formulation based on stability
         goal = "STABLE"
@@ -114,3 +118,46 @@ class MetaProcessor:
             goal = "GOAL_STABILIZE_MANIFOLD"
             
         return goal, crystallized_events
+        
+    def get_geometric_grammar(self):
+        """
+        Topological Linguistics:
+        Autonomously derives grammar (verbs, nouns, adjectives) purely from the shape of the Persistent Language Manifold.
+        Returns a dictionary mapping words to their topological scalars.
+        """
+        if not self.E_base:
+            return {}
+            
+        # Build NetworkX Graph from the edge weights
+        G = nx.Graph()
+        for w1, connections in self.E_base.items():
+            for w2, weight in connections.items():
+                G.add_edge(w1, w2, weight=weight)
+                
+        if len(G.nodes) < 3:
+            return {}
+            
+        # Calculate Centralities
+        try:
+            betweenness = nx.betweenness_centrality(G, weight='weight')
+            clustering = nx.clustering(G, weight='weight')
+            
+            grammar_map = {}
+            for node in G.nodes():
+                b_score = betweenness.get(node, 0)
+                c_score = clustering.get(node, 0)
+                
+                # Transformer (Verb): High Betweenness (Bridges disconnected clusters)
+                if b_score > 0.05 and b_score > c_score:
+                    grammar_map[node] = 1.5
+                # Anchor (Noun): High Clustering, Low Betweenness (Dense local gravity well)
+                elif c_score > 0.1 and b_score < 0.05:
+                    grammar_map[node] = 1.0
+                # Modifier (Adjective): Low Betweenness, Moderate Clustering (Satellite)
+                else:
+                    grammar_map[node] = 1.2
+                    
+            return grammar_map
+        except Exception as e:
+            print(f"[META-PROCESSOR] Topological Grammar error: {e}")
+            return {}

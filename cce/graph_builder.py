@@ -1,12 +1,13 @@
 import numpy as np
 
 class GraphBuilder:
-    def __init__(self, tokens, w2v_model=None, plm_edges=None):
+    def __init__(self, tokens, w2v_model=None, plm_edges=None, grammar_map=None):
         self.tokens = tokens
         self.n = len(tokens)
         self.adjacency = np.zeros((self.n, self.n))
         self.w2v = w2v_model
         self.plm_edges = plm_edges or {}
+        self.grammar_map = grammar_map or {}
         
         # Formal Logic Dictionary D (Fallback overrides)
         self.contrast_pairs = {
@@ -24,19 +25,18 @@ class GraphBuilder:
         self.adjacency[t1_idx, t2_idx] = weight
         self.adjacency[t2_idx, t1_idx] = weight
         
-    def get_linguism_modifier(self, pos):
+    def get_geometric_scalar(self, word):
         """
-        Linguism Coordinate Mapping:
-        Maps parts of speech to geometric operators and scalars.
+        Topological Linguistics:
+        Instead of using NLTK Parts of Speech, the engine relies on the physical shape
+        of its own language manifold (Betweenness vs Clustering) to determine the mathematical
+        function of a word (Transformer vs Anchor).
         """
-        if pos.startswith('JJ'): # Adjectives -> Curvature adjustments
-            return 1.2
-        elif pos.startswith('RB'): # Adverbs -> Magnitude scalars
-            return 1.1
-        elif pos.startswith('VB'): # Verbs -> Transformations
-            return 1.5
-        elif pos.startswith('NN'): # Nouns -> Stable points
-            return 1.0
+        # If the word exists in the autonomous grammar map, use its derived physical scalar
+        if word in self.grammar_map:
+            return self.grammar_map[word]
+            
+        # If it's a completely new word, assign neutral gravity (1.0) until the manifold shapes it
         return 1.0
         
     def semantic_contrast_predicate(self, word1, word2):
@@ -91,9 +91,9 @@ class GraphBuilder:
                 
                 weight = self.semantic_contrast_predicate(word_i, word_j)
                 
-                # Apply Linguism Coordinates (Scalars)
-                mod_i = self.get_linguism_modifier(pos_i)
-                mod_j = self.get_linguism_modifier(pos_j)
+                # Apply Autopoietic Geometric Grammar (Scalars)
+                mod_i = self.get_geometric_scalar(word_i.lower())
+                mod_j = self.get_geometric_scalar(word_j.lower())
                 linguism_scalar = mod_i * mod_j
                 
                 if weight < 0:
