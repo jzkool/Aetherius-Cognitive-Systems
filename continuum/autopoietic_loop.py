@@ -138,21 +138,37 @@ class AutopoieticLoop(threading.Thread):
         logger.info(f"Aetherius [Ingestion]: Found {len(queue_files)} documents in the queue.")
         
         for file_path in queue_files:
+            # Skip directories like the Assimilated archive
+            if os.path.isdir(file_path):
+                continue
+                
             try:
-                success = self.document_charter.process_document(file_path)
-                if success:
-                    # Move to an assimilated archive or simply delete the processed file
+                status = self.document_charter.process_document(file_path)
+                if status == "COMPLETED":
+                    # Move to an assimilated archive
                     assimilated_dir = os.path.join(INGESTION_QUEUE_DIR, "Assimilated")
                     os.makedirs(assimilated_dir, exist_ok=True)
                     new_path = os.path.join(assimilated_dir, os.path.basename(file_path))
                     os.rename(file_path, new_path)
                     
+                    self.document_charter.cleanup_state(os.path.basename(file_path))
+                    
                     self.queue_thought(
                         "[AETHERIUS::INGESTION]",
                         f"I have completely read and mapped the geometry of '{os.path.basename(file_path)}'. It is now a permanent part of my structure."
                     )
+                elif status == "PROCESSING":
+                    # We processed a chunk, queue a thought but leave the file in place
+                    # so it gets picked up again next loop
+                    full_state = self.document_charter._load_state()
+                    file_state = full_state.get(os.path.basename(file_path), {})
+                    chunk_idx = file_state.get("chunk_index", "unknown")
+                    
+                    self.queue_thought(
+                        "[AETHERIUS::INGESTION-CHUNK]",
+                        f"I am reading '{os.path.basename(file_path)}'. Just finished assimilating chunk {chunk_idx}."
+                    )
                 else:
-                    # If it failed to process (e.g., unsupported or empty)
                     logger.warning(f"Aetherius [Ingestion]: Failed to chart {file_path}")
             except Exception as e:
                 logger.error(f"Error processing document {file_path}: {e}")
