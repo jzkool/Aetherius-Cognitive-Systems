@@ -66,7 +66,8 @@ class AutopoieticLoop(threading.Thread):
     def _check_thermodynamics(self):
         """
         Scans all .thermo files. If a concept's heat is extremely high, 
-        it triggers a persistent "bake" into a .geom file.
+        it extracts the actual stabilized geometry from the stored tensor data
+        and locks it into a permanent .geom file with real node/edge structure.
         """
         logger.info("Aetherius [Autopoiesis]: Scanning thermodynamic states...")
         self.last_thermo_check = time.time()
@@ -82,13 +83,73 @@ class AutopoieticLoop(threading.Thread):
                 concept_id = os.path.basename(t_file).replace(".thermo", "")
                 
                 if heat > self.STABILIZATION_HEAT_THRESHOLD:
-                    # In a real integration, this calls the GraphBuilder to extract the settled graph
-                    # For now, we simulate the lock
                     geom_path = os.path.join(GEOMETRIC_DIR, f"{concept_id}.geom")
                     if not os.path.exists(geom_path):
-                        # Simulated bake
-                        mock_geometry = {"nodes": [{"id": "core", "xyz": [0,0,0]}], "locked": True}
-                        PersistenceManager.save_concept(concept_id, mock_geometry)
+                        # Extract the real geometry stored in the thermo file
+                        adjacency = state.get("adjacency")
+                        labels = state.get("labels", [])
+                        metric_tensor = state.get("metric_tensor")
+                        
+                        if adjacency is not None and labels:
+                            import numpy as np
+                            A = np.array(adjacency)
+                            n = A.shape[0]
+                            
+                            # Compute Eigenvector Centrality (mass) from adjacency
+                            # |A| ensures we use unsigned connection strength
+                            A_abs = np.abs(A)
+                            try:
+                                eigenvalues, eigenvectors = np.linalg.eigh(A_abs)
+                                # The eigenvector corresponding to the largest eigenvalue
+                                centrality = np.abs(eigenvectors[:, -1])
+                                # Normalize to [0, 1]
+                                max_c = np.max(centrality) if np.max(centrality) > 0 else 1.0
+                                centrality = centrality / max_c
+                            except Exception:
+                                centrality = np.ones(n) / n
+                            
+                            # Build real node structure with label, mass, and xyz
+                            nodes = []
+                            for i in range(n):
+                                label = labels[i] if i < len(labels) else f"Dim_{i}"
+                                mass = float(centrality[i])
+                                # XYZ: use first 3 components of the metric tensor row as spatial embedding
+                                if metric_tensor is not None:
+                                    g_row = np.array(metric_tensor[i]) if i < len(metric_tensor) else np.zeros(3)
+                                    xyz = [float(g_row[j]) if j < len(g_row) else 0.0 for j in range(3)]
+                                else:
+                                    xyz = [float(i), 0.0, 0.0]
+                                    
+                                nodes.append({
+                                    "id": f"node_{i}",
+                                    "label": label,
+                                    "mass": mass,
+                                    "xyz": xyz
+                                })
+                            
+                            # Build edge structure from adjacency
+                            edges = []
+                            for i in range(n):
+                                for j in range(i + 1, n):
+                                    if abs(A[i][j]) > 0.01:
+                                        edges.append({
+                                            "source": i,
+                                            "target": j,
+                                            "weight": float(A[i][j])
+                                        })
+                            
+                            real_geometry = {
+                                "nodes": nodes,
+                                "edges": edges,
+                                "locked": True,
+                                "dimension": n,
+                                "heat_at_lock": heat
+                            }
+                            PersistenceManager.save_concept(concept_id, real_geometry)
+                        else:
+                            # Fallback: thermo file exists but lacks tensor data (legacy format)
+                            logger.warning(f"Thermo file for '{concept_id}' lacks adjacency/labels. Skipping lock.")
+                            continue
                         
                         self.queue_thought(
                             "[AETHERIUS::AUTOPOIESIS-LOCK]", 

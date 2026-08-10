@@ -70,7 +70,7 @@ def process_dream():
     except Exception as e:
         return f"Error: {str(e)}", "Error", "Error", "N/A", "N/A", "N/A", "N/A", gr.update()
 
-with gr.Blocks(title="Aetherius: Computational Cognition Engine") as demo:
+with gr.Blocks(title="Aetherius: Computational Cognition Engine", theme=gr.themes.Soft()) as demo:
     gr.Markdown("# 🌌 Aetherius Cognitive Systems")
     gr.Markdown("Welcome to the **Aetherius Engine**. This system doesn't predict next tokens. It maps your input into a geometric manifold, applies a Ricci-Fisher flow operator, and stabilizes the topological structure into absolute mathematical reality.")
     
@@ -118,4 +118,4 @@ with gr.Blocks(title="Aetherius: Computational Cognition Engine") as demo:
     demo.load(start_daemon_safely, inputs=None, outputs=None)
 
 if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0", server_port=7860, theme=gr.themes.Soft())
+    demo.launch(server_name="0.0.0.0", server_port=7860)

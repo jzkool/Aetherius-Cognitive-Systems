@@ -3,6 +3,7 @@ import json
 import os
 import networkx as nx
 from core.config import BRAIN_DIR
+from core.json_encoder import safe_json_dump
 
 class MetaProcessor:
     """
@@ -25,9 +26,9 @@ class MetaProcessor:
     def save_manifold(self):
         try:
             with open(self.storage_path, "w") as f:
-                json.dump(self.M_base, f)
+                safe_json_dump(self.M_base, f)
             with open(self.edge_storage_path, "w") as f:
-                json.dump(self.E_base, f)
+                safe_json_dump(self.E_base, f)
             print(f"[META-PROCESSOR] Successfully saved mass manifold and language topology to persistent bucket.")
         except Exception as e:
             print(f"[META-PROCESSOR] CRITICAL FAILURE: Cannot write to persistent bucket. Error: {e}")

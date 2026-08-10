@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+from core.json_encoder import safe_json_dump
 
 try:
     from core.config import GEOMETRIC_DIR, THERMO_DIR, LANGUAGE_DIR
@@ -25,7 +26,7 @@ class PersistenceManager:
         
         try:
             with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(graph_data, f, indent=2)
+                safe_json_dump(graph_data, f, indent=2)
             logger.info(f"Locked geometry saved for {concept_id}")
             return True
         except Exception as e:
@@ -41,7 +42,7 @@ class PersistenceManager:
         file_path = os.path.join(THERMO_DIR, f"{concept_id}.thermo")
         try:
             with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(thermo_state, f, indent=2)
+                safe_json_dump(thermo_state, f, indent=2)
             logger.debug(f"Thermodynamics updated for {concept_id}")
             return True
         except Exception as e:

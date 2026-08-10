@@ -1,6 +1,7 @@
 import json
 import os
 from core.config import DATA_DIR
+from core.json_encoder import safe_json_dump
 
 class ConceptualConnectionResonanceMatrix:
     def __init__(self): 
@@ -16,7 +17,7 @@ class ConceptualConnectionResonanceMatrix:
             
         try:
             with open(self.storage_path, "w") as f:
-                json.dump(serializable, f)
+                safe_json_dump(serializable, f)
             print(f"[CCRM] Successfully saved memory to persistent bucket: {self.storage_path}")
         except Exception as e:
             print(f"[CCRM] CRITICAL FAILURE: Cannot write to persistent bucket. Error: {e}")

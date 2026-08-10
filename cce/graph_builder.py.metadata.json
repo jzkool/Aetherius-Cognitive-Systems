@@ -1,4 +1,4 @@
 {
-  "summary": "Updated GraphBuilder to accept the Persistent Language Manifold edges and blend them into geometry calculations.",
-  "updatedAt": "2026-08-10T13:44:20.362988Z"
+  "summary": "Updated GraphBuilder to use Geometric Grammar scalars instead of NLTK tags.",
+  "updatedAt": "2026-08-10T14:00:53.672819900Z"
 }

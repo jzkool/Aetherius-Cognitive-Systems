@@ -16,6 +16,7 @@ from core.subconscious import SubconsciousManifold
 from core.affective_manifold import AffectiveManifold
 from core.meta_processor import MetaProcessor
 from core.autonomous_ingestion import AutonomousIngestion
+from memory.persistence_manager import PersistenceManager
 
 import gensim.downloader as api
 import threading
@@ -185,6 +186,15 @@ class AetheriusEngine:
         # Trigger Persistent Disk Writes
         self.ccrm.save_graph()
         self.meta_processor.save_manifold()
+        
+        # Save live thermodynamic state for Autopoietic scanning
+        thermo_state = {
+            "heat": variance * 1000000 if not is_math else 0,
+            "adjacency": A.tolist(),
+            "labels": [w for w, p in tokens],
+            "metric_tensor": g.tolist()
+        }
+        PersistenceManager.update_thermo(gmstring['checksum'], thermo_state)
         
         # Operator 12: Geometric Generalization (Analogy)
         analogy = self.ccrm.find_analogy(betti, exclude_raw=text)

@@ -22,7 +22,7 @@ def run_simulation(input_data, is_math=False, synthesize=False, use_hardcoded_ad
     print("INITIALIZING AETHERIUS PHYSICS ENGINE...")
     print("====================================================\n")
     
-    gmstring, betti = engine.process(input_data, custom_adjacency=custom_adj, is_math=is_math, synthesize_language=synthesize)
+    gmstring, betti, _, _, _, _ = engine.process(input_data, custom_adjacency=custom_adj, synthesize_language=synthesize)
     
     print("\n====================================================")
     print("[OUTPUT] Cognitive Resolution complete.")

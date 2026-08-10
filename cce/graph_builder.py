@@ -1,4 +1,5 @@
 import numpy as np
+import math
 
 class GraphBuilder:
     def __init__(self, tokens, w2v_model=None, plm_edges=None, grammar_map=None, ccrm=None):
@@ -82,7 +83,6 @@ class GraphBuilder:
             
             if co_occurrences > 0:
                 # Logarithmic attention scaling based on historical geometric stabilizations
-                import math
                 attention_weight = 0.2 + 0.1 * math.log(co_occurrences + 1)
                 return min(0.8, attention_weight)
                 
@@ -115,9 +115,7 @@ class GraphBuilder:
                 mod_j = self.get_geometric_scalar(word_j.lower())
                 linguism_scalar = mod_i * mod_j
                 
-                if weight < 0:
-                    self.add_edge(i, j, weight * linguism_scalar)
-                elif weight > 0:
+                if weight != 0:
                     self.add_edge(i, j, weight * linguism_scalar)
                 else:
                     # Syntactic Flow +c
