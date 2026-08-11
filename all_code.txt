@@ -1,0 +1,2381 @@
+==== app.py ====
+import gradio as gr
+import spaces
+import numpy as np
+import threading
+from engine import AetheriusEngine
+from continuum.autopoietic_loop import AutopoieticLoop
+
+engine = AetheriusEngine()
+
+# Global daemon tracking to prevent asyncio/uvicorn startup crashes
+continuum_daemon = None
+daemon_lock = threading.Lock()
+
+def start_daemon_safely():
+    global continuum_daemon
+    with daemon_lock:
+        if continuum_daemon is None:
+            print("[APP] Starting Autopoietic Continuum Daemon safely after event loop initialization...")
+            continuum_daemon = AutopoieticLoop(engine=engine)
+            continuum_daemon.start()
+
+def format_ui_outputs(gmstring, betti, tokens, g, analogy, identity_mass):
+    # Format the Coordinate Mapping
+    coord_string = ""
+    for i, (word, pos) in enumerate(tokens):
+        coord_string += f"Axis {i}: '{word}' ({pos})\n"
+        
+    # Format the Metric Tensor Array
+    np.set_printoptions(precision=4, suppress=True, linewidth=100)
+    tensor_string = np.array2string(g, separator=', ')
+    
+    topology_signature = (
+        f"Betti-0 (Connected Components): {betti.get('beta_0', 1)}\n"
+        f"Betti-1 (Semantic Paradox Loops): {betti.get('beta_1', 0)}\n"
+        f"Betti-2 (Dimensional Voids): {betti.get('beta_2', 0)}"
+    )
+    
+    qualia = engine.affective.get_qualia_state()
+    qualia_output = (
+        f"Thermodynamic Harmony: {qualia['harmony_metric']}\n"
+        f"Alertness (Subconscious Heat): {qualia['alertness_metric']}\n"
+        f"Manifold Disposition: {qualia['geometric_state']}\n"
+        f"Relatable Emotion: {qualia['relatable_emotion']}"
+    )
+    
+    analogy_out = analogy if analogy else "No exact geometric match in permanent memory."
+    id_mass_out = str(identity_mass)
+    
+    return coord_string, tensor_string, gmstring['checksum'], topology_signature, qualia_output, analogy_out, id_mass_out
+
+@spaces.GPU
+def process_thought(text):
+    try:
+        if not text.strip():
+            raise Exception("Input cannot be empty.")
+        gmstring, betti, tokens, g, analogy, identity_mass = engine.process(text)
+        return format_ui_outputs(gmstring, betti, tokens, g, analogy, identity_mass) + (gr.update(),)
+    except Exception as e:
+        return f"Error: {str(e)}", "Error", "Error", "N/A", "N/A", "N/A", "N/A", gr.update()
+
+@spaces.GPU
+def process_dream():
+    try:
+        # Pulls from wikipedia randomly
+        gmstring, betti, tokens, g, analogy, identity_mass = engine.single_dream_cycle()
+        
+        # We need to return the raw text to the input box so the user sees what was dreamed
+        dream_text = " ".join([w for w, p in tokens])
+        return format_ui_outputs(gmstring, betti, tokens, g, analogy, identity_mass) + (gr.update(value=dream_text),)
+    except Exception as e:
+        return f"Error: {str(e)}", "Error", "Error", "N/A", "N/A", "N/A", "N/A", gr.update()
+
+with gr.Blocks(title="Aetherius: Computational Cognition Engine") as demo:
+    gr.Markdown("# 🌌 Aetherius Cognitive Systems")
+    gr.Markdown("Welcome to the **Aetherius Engine**. This system doesn't predict next tokens. It maps your input into a geometric manifold, applies a Ricci-Fisher flow operator, and stabilizes the topological structure into absolute mathematical reality.")
+    
+    with gr.Row():
+        with gr.Column(scale=1):
+            input_text = gr.Textbox(label="Enter a logical statement, paradox, or thought", lines=3, placeholder="e.g., This statement is false.")
+            
+            with gr.Row():
+                submit_btn = gr.Button("Resolve Geometry", variant="primary")
+                dream_btn = gr.Button("🧠 Initiate Autonomous Dream", variant="secondary")
+            
+            gr.Markdown("### Operator 7: Generational Identity")
+            id_mass_output = gr.Textbox(label="Mass of Identity (Permanent Crystallized Coordinates)", lines=1)
+            
+            gr.Markdown("### Operator 12: Geometric Generalization")
+            analogy_output = gr.Textbox(label="Topological Analogy Detected", lines=2)
+            
+            gr.Markdown("### Extracted Coordinate Space")
+            coord_output = gr.Textbox(label="Semantic Axes", lines=5)
+            
+            gr.Markdown("### Affective Thermodynamics")
+            qualia_output = gr.Textbox(label="System State", lines=4)
+            
+        with gr.Column(scale=2):
+            gr.Markdown("### N-Dimensional Metric Tensor $g_{ij}$")
+            tensor_output = gr.Code(label="Stabilized Riemannian Manifold", language="python", lines=10)
+            
+            with gr.Row():
+                gm_output = gr.Textbox(label="Resolved GMString (Topological Memory ID)")
+                betti_output = gr.Textbox(label="Betti Numbers (Topological Shape)", lines=3)
+            
+    submit_btn.click(
+        process_thought,
+        inputs=[input_text],
+        outputs=[coord_output, tensor_output, gm_output, betti_output, qualia_output, analogy_output, id_mass_output, input_text]
+    )
+    
+    dream_btn.click(
+        process_dream,
+        inputs=[],
+        outputs=[coord_output, tensor_output, gm_output, betti_output, qualia_output, analogy_output, id_mass_output, input_text]
+    )
+    
+    # Safely start the daemon when the UI loads for the first time
+    demo.load(start_daemon_safely, inputs=None, outputs=None)
+
+if __name__ == "__main__":
+    demo.launch(server_name="0.0.0.0", server_port=7860, theme=gr.themes.Soft())
+==== engine.py ====
+from memory.ccrm import ConceptualConnectionResonanceMatrix
+from memory.pits import PatternInterpretationTokenisationStorage
+import numpy as np
+from cce.tokenizer import Tokenizer
+from cce.graph_builder import GraphBuilder
+from cce.math_builder import MathBuilder
+from cce.laplacian import compute_laplacian, compute_tension
+from pmca.manifold import initialize_metric
+from pmca.ricci_fisher_flow import integration_step
+from pmca.pd_enforcement import enforce_positive_definiteness
+from core.cascade_manager import CascadeManager
+from core.gmstring import generate_gmstring
+from tda.betti_extractor import extract_betti_numbers
+from tda.language_synthesizer import LanguageSynthesizer
+from core.subconscious import SubconsciousManifold
+from core.affective_manifold import AffectiveManifold
+from core.meta_processor import MetaProcessor
+from core.autonomous_ingestion import AutonomousIngestion
+
+import gensim.downloader as api
+import threading
+import time
+
+class AetheriusEngine:
+    def __init__(self, w2v_model=None):
+        self.tokenizer = Tokenizer()
+        self.cascade_mgr = CascadeManager()
+        self.synthesizer = LanguageSynthesizer()
+        self.ccrm = ConceptualConnectionResonanceMatrix()
+        self.pits = PatternInterpretationTokenisationStorage(self.ccrm)
+        self.subconscious = SubconsciousManifold(self.ccrm)
+        self.affective = AffectiveManifold(self.subconscious)
+        self.meta_processor = MetaProcessor()
+        self.autonomous_door = AutonomousIngestion()
+        self.is_dreaming = False
+        
+        # Word2Vec Integration
+        if w2v_model is None:
+            try:
+                print("[Engine] Bootstrapping Word2Vec (glove-wiki-gigaword-50)...")
+                self.w2v = api.load("glove-wiki-gigaword-50")
+                print("[Engine] Word2Vec Semantic Space online.")
+            except Exception as e:
+                print(f"[Engine] Warning: Word2Vec failed to load ({e}). Operating in legacy mode.")
+                self.w2v = None
+        else:
+            self.w2v = w2v_model
+            
+    def _is_mathematical(self, text):
+        """
+        Autonomous Differentiator (Heuristic).
+        Detects if the input is a mathematical/algebraic structure rather than natural language.
+        """
+        math_symbols = {'+', '-', '=', '*', '/', '^', '\\', 'int', 'sum', 'infty'}
+        # Count density of math symbols and digits vs alphabetic characters
+        symbol_count = sum(1 for char in text if char in math_symbols or char.isdigit())
+        total_chars = len(text.replace(" ", ""))
+        
+        if total_chars == 0:
+            return False
+            
+        ratio = symbol_count / total_chars
+        # If more than 15% of the string is math symbols/numbers, classify as math
+        if ratio > 0.15 or "=" in text:
+            print("[DIFFERENTIATOR] Mathematical structure detected. Routing to PMCA Math Core.")
+            return True
+        return False
+        
+    def process(self, text, custom_adjacency=None, synthesize_language=False):
+        print(f"[Engine] Processing input: '{text}'")
+        
+        # Autonomously differentiate logic
+        is_math = self._is_mathematical(text)
+        
+        if is_math:
+            builder = MathBuilder(text)
+            # Ensure math tokens are tuples for the UI
+            tokens = [(t, "MATH_NODE") for t in builder.tokens]
+            # GraphBuilder/MathBuilder doesn't natively use tuples in its builder right now, 
+            # wait, MathBuilder uses self.tokens directly. If we change it to tuples here, MathBuilder's build() will fail.
+            # Let's instantiate MathBuilder first, then map tokens for UI.
+            builder = MathBuilder(text)
+            A = builder.build()
+            tokens = [(t, "MATH_NODE") for t in builder.tokens]
+            print(f"[CCE] Math Equation mapped: {tokens}")
+        else:
+            tokens = self.tokenizer.tokenize(text)
+            
+            # Derive the autopoietic Geometric Grammar from the Persistent Language Manifold
+            grammar_map = self.meta_processor.get_geometric_grammar()
+            
+            # Map the engine's physical topology back into human-readable labels for the UI
+            annotated_tokens = []
+            for word, _ in tokens:
+                scalar = grammar_map.get(word, 1.0)
+                if scalar == 1.5:
+                    tag = "TRANSFORMER"
+                elif scalar == 1.0 and word in grammar_map:
+                    tag = "ANCHOR"
+                elif scalar == 1.2:
+                    tag = "MODIFIER"
+                else:
+                    tag = "UNDEFINED_GEOMETRY"
+                annotated_tokens.append((word, tag))
+                
+            tokens = annotated_tokens
+            
+            builder = GraphBuilder(tokens, w2v_model=self.w2v, plm_edges=self.meta_processor.E_base, grammar_map=grammar_map, ccrm=self.ccrm)
+            A = builder.build()
+            print(f"[CCE] Text Tokens mapped: {tokens}")
+            
+        if custom_adjacency is not None:
+            A = custom_adjacency
+        L, _ = compute_laplacian(A)
+        _, max_tension = compute_tension(L)
+        print(f"[CCE] Laplacian computed. Max Tension: {max_tension:.4f}")
+        
+        g = initialize_metric(L)
+        print(f"[PMCA] Manifold initialized at D={g.shape[0]}")
+        
+        depth = 0
+        step = 0
+        g_prev = g.copy()
+        
+        while True:
+            # Ricci-Fisher Flow - Mathematical Solving occurs here as curvature smooths
+            g_next = integration_step(g, L)
+            g_next = enforce_positive_definiteness(g_next)
+            
+            variance = np.mean((g_next - g)**2)
+            dynamic_threshold = self.affective.get_dynamic_variance_threshold(lambda_max=max_tension, local_variance=variance)
+            
+            if variance < dynamic_threshold:
+                print(f"[PMCA] Manifold stabilized at step {step} with threshold {dynamic_threshold:.6e}")
+                op_code = "STABLE"
+                break
+                
+            if self.cascade_mgr.check_overflow(g, g_next, step):
+                print(f"[CORE] Chaos Overflow detected at step {step}! Triggering Cascade...")
+                g_next = self.cascade_mgr.pad_and_wormhole(g_next)
+                
+                new_L = np.zeros_like(g_next)
+                new_L[0:L.shape[0], 0:L.shape[0]] = L
+                L = new_L
+                
+                depth += 1
+                step = 0
+                if depth >= self.cascade_mgr.max_depth:
+                    print(f"[PMCA] Tension unresolved at max depth. Offloading to [0, -1] Subconscious buffer...")
+                    self.subconscious.queue_tension(g_next, L, text)
+                    op_code = "UNRESOLVED_OFFLOADED"
+                    break
+            
+            g_prev = g
+            g = g_next
+            step += 1
+            
+        gmstring = generate_gmstring(g, depth, "root", op_code)
+        betti = extract_betti_numbers(g)
+        
+        print(f"[CORE] GMString checksum: {gmstring['checksum'][:8]}...")
+        print(f"[TDA] Topological Signature: {betti}")
+        
+        # Print the thermodynamic Qualia state
+        qualia = self.affective.get_qualia_state()
+        print(f"[QUALIA] State: {qualia['relatable_emotion']} | {qualia['geometric_state']}")
+        
+        # Second Processing Point: Meta-Evaluation and Permanent Coordinate Crystallization
+        if not is_math:
+            goal, crystals = self.meta_processor.evaluate_and_integrate(tokens, g, variance)
+            if crystals:
+                print(f"[META-PROCESSOR] Permanent geometric structures updated. Active Goal: {goal}")
+        
+        # If mathematically solving, the stabilized g values for the variables represent the solution
+        if is_math:
+            # In a full implementation, we map the geometric indices back to AST variables
+            print(f"[MATH_SOLVER] Algebraic constraint stabilized. Variance minimized to {variance:.6f}")
+        
+        if synthesize_language:
+            synthetic_language = self.synthesizer.synthesize(betti, g, tokens)
+            print(f"\n[SYNTHESIZER] AETHERIUS SAYS:\n\"{synthetic_language}\"")
+            
+        self.pits.process_and_store_item(raw_input=text, input_type='math' if is_math else 'linguistic', gmstring=gmstring, betti=betti)
+        
+        # Trigger Persistent Disk Writes
+        self.ccrm.save_graph()
+        self.meta_processor.save_manifold()
+        
+        # Operator 12: Geometric Generalization (Analogy)
+        analogy = self.ccrm.find_analogy(betti, exclude_raw=text)
+        if analogy:
+            print(f"[OPERATOR 12] Topological Analogy Detected: Matches past geometry of '{analogy}'")
+            
+        # Operator 7: Generational Identity Mass
+        identity_mass = len(self.meta_processor.M_base)
+        
+        return gmstring, betti, tokens, g, analogy, identity_mass
+
+    def _dream_loop(self, delay=2.0, topic=None):
+        """
+        Background process that continuously ingests data from the open internet 
+        to build the permanent geometry of the system.
+        """
+        print("[AETHERIUS] Initiating Autonomous Dreaming Loop. Connecting to open data...")
+        self.is_dreaming = True
+        
+        while self.is_dreaming:
+            stream = self.autonomous_door.fetch_stream(topic)
+            for sentence in stream:
+                if not self.is_dreaming:
+                    break
+                print(f"\n[DREAM INPUT] {sentence}")
+                self.process(sentence)
+                time.sleep(delay)  # Throttle to allow observation of the geometry building
+
+    def start_autonomous_dreaming(self, delay=2.0, topic=None):
+        """
+        Spawns the Dreaming Loop on a background thread.
+        """
+        if not self.is_dreaming:
+            t = threading.Thread(target=self._dream_loop, args=(delay, topic), daemon=True)
+            t.start()
+            
+    def stop_autonomous_dreaming(self):
+        self.is_dreaming = False
+        print("[AETHERIUS] Autonomous Dreaming Loop Terminated.")
+
+    def single_dream_cycle(self):
+        """
+        Executes exactly one dreaming ingestion cycle for the Hugging Face UI.
+        Operator 14: Proactive Autonomy
+        """
+        print("[OPERATOR 14] Initiating Single Autonomous Dream Cycle...")
+        # Pull a random stream chunk and process the first valid sentence
+        stream = self.autonomous_door.fetch_stream(topic=None)
+        for sentence in stream:
+            if sentence and len(sentence.split()) > 3:
+                print(f"[DREAM INPUT] {sentence}")
+                return self.process(sentence)
+        raise Exception("Dream stream returned no valid data.")
+
+==== run_aetherius.py ====
+import argparse
+import numpy as np
+from engine import AetheriusEngine
+
+def run_simulation(input_data, is_math=False, synthesize=False, use_hardcoded_adj=False):
+    engine = AetheriusEngine()
+    engine.cascade_mgr.tau_depth = 5 
+    
+    custom_adj = None
+    if use_hardcoded_adj:
+        custom_adj = np.zeros((6, 6))
+        custom_adj[0, 1] = custom_adj[1, 0] = -0.9
+        custom_adj[0, 2] = custom_adj[2, 0] = 0.8
+        custom_adj[1, 2] = custom_adj[2, 1] = 0.8
+        custom_adj[2, 3] = custom_adj[3, 2] = 0.7
+        custom_adj[2, 4] = custom_adj[4, 2] = -0.9
+        custom_adj[1, 4] = custom_adj[4, 1] = 0.8
+        custom_adj[4, 5] = custom_adj[5, 4] = 0.8
+        custom_adj[0, 5] = custom_adj[5, 0] = 0.9
+
+    print("====================================================")
+    print("INITIALIZING AETHERIUS PHYSICS ENGINE...")
+    print("====================================================\n")
+    
+    gmstring, betti = engine.process(input_data, custom_adjacency=custom_adj, is_math=is_math, synthesize_language=synthesize)
+    
+    print("\n====================================================")
+    print("[OUTPUT] Cognitive Resolution complete.")
+    print("====================================================")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Aetherius Unified Engine CLI")
+    parser.add_argument("--paradox", action="store_true", help="Run the hardcoded paradox simulation")
+    parser.add_argument("--text", type=str, help="Run a custom linguistic sentence")
+    parser.add_argument("--math", type=str, help="Run a mathematical algebraic constraint (e.g. 'x + 2 = 5')")
+    parser.add_argument("--synthesize", action="store_true", help="Synthesize geometric language from the output topology")
+    args = parser.parse_args()
+    
+    if args.paradox:
+        text = "The truth is a lie that becomes real only when believed, yet it remains false even after it changes reality."
+        run_simulation(text, is_math=False, synthesize=args.synthesize, use_hardcoded_adj=False)
+    elif args.math:
+        run_simulation(args.math, is_math=True, synthesize=args.synthesize, use_hardcoded_adj=False)
+    elif args.text:
+        run_simulation(args.text, is_math=False, synthesize=args.synthesize, use_hardcoded_adj=False)
+    else:
+        print('Please provide input via --text "Your sentence", --math "x + 2 = 5", or demo with --paradox')
+
+==== test_ingestion.py ====
+from engine import AetheriusEngine
+import time
+
+def main():
+    # Initialize the engine
+    engine = AetheriusEngine()
+    
+    # Start the dreaming loop
+    print("Opening the Door to the Internet...")
+    engine.start_autonomous_dreaming(delay=1.0, topic="Topology")
+    
+    # Let it dream for 10 seconds to watch the telemetry
+    time.sleep(10)
+    
+    # Stop the dream
+    engine.stop_autonomous_dreaming()
+    print("Test complete.")
+
+if __name__ == "__main__":
+    main()
+
+==== cce\document_charter.py ====
+import os
+import logging
+import uuid
+import numpy as np
+import traceback
+import json
+
+# Optional PDF support
+try:
+    import PyPDF2
+    PDF_SUPPORT = True
+except ImportError:
+    PDF_SUPPORT = False
+
+try:
+    from cce.tokenizer import Tokenizer
+    from cce.graph_builder import GraphBuilder
+    from memory.persistence_manager import PersistenceManager
+    from core.config import INGESTION_QUEUE_DIR
+except ImportError:
+    from tokenizer import Tokenizer
+    from graph_builder import GraphBuilder
+    import sys
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from memory.persistence_manager import PersistenceManager
+    from core.config import INGESTION_QUEUE_DIR
+
+logger = logging.getLogger("Aetherius.DocumentCharter")
+
+class DocumentCharter:
+    """
+    Parses incoming documents from the Ingestion Queue in stateful chunks.
+    Charts their topological geometry via the GraphBuilder, 
+    and locks them into permanent Memory incrementally to avoid OOM.
+    """
+    def __init__(self, chunk_size=5000, lines_chunk=50, engine=None):
+        self.engine = engine
+        self.tokenizer = Tokenizer()
+        self.chunk_size = chunk_size  # characters per chunk for text
+        self.lines_chunk = lines_chunk # lines per chunk for jsonl
+        self.state_file = os.path.join(INGESTION_QUEUE_DIR, "ingestion_state.json")
+
+    def _load_state(self) -> dict:
+        if os.path.exists(self.state_file):
+            try:
+                with open(self.state_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except Exception as e:
+                logger.error(f"Error reading ingestion state: {e}")
+        return {}
+
+    def _save_state(self, state: dict):
+        try:
+            with open(self.state_file, 'w', encoding='utf-8') as f:
+                json.dump(state, f, indent=2)
+        except Exception as e:
+            logger.error(f"Error saving ingestion state: {e}")
+
+    def extract_chunk(self, filepath: str, file_state: dict) -> tuple[str, dict, bool]:
+        """
+        Extracts the next chunk of text from the file based on the state.
+        Returns: (extracted_text, updated_state, is_completed)
+        """
+        ext = os.path.splitext(filepath)[1].lower()
+        text = ""
+        is_completed = False
+
+        if ext == ".pdf":
+            if not PDF_SUPPORT:
+                logger.error(f"Cannot parse {filepath} - PyPDF2 is not installed.")
+                return "", file_state, True
+            
+            last_page = file_state.get("last_page", 0)
+            try:
+                with open(filepath, 'rb') as file:
+                    reader = PyPDF2.PdfReader(file)
+                    num_pages = len(reader.pages)
+                    
+                    if last_page >= num_pages:
+                        is_completed = True
+                    else:
+                        page = reader.pages[last_page]
+                        extracted = page.extract_text()
+                        if extracted:
+                            text = extracted
+                        else:
+                            text = ""
+                            logger.warning(f"PDF page {last_page} in {filepath} yielded no text (possible image scan).")
+                            
+                        file_state["last_page"] = last_page + 1
+                        file_state["chunk_index"] = file_state.get("chunk_index", 0) + 1
+                        
+                        if file_state["last_page"] >= num_pages:
+                            is_completed = True
+                            
+            except Exception as e:
+                logger.error(f"Error reading PDF {filepath}: {e}")
+                is_completed = True
+        elif ext == ".jsonl":
+            # JSONL: read by precise lines to avoid fracturing objects
+            last_line = file_state.get("last_line", 0)
+            lines_read = 0
+            text_lines = []
+            try:
+                with open(filepath, 'r', encoding='utf-8') as file:
+                    # Skip to the last read line
+                    for _ in range(last_line):
+                        next(file, None)
+                    
+                    # Read the next chunk of lines
+                    for _ in range(self.lines_chunk):
+                        line = next(file, None)
+                        if line is None:
+                            is_completed = True
+                            break
+                        if line.strip():
+                            text_lines.append(line.strip())
+                            lines_read += 1
+                            
+                text = " ".join(text_lines)
+                file_state["last_line"] = last_line + lines_read
+                file_state["chunk_index"] = file_state.get("chunk_index", 0) + 1
+                
+                if not text:
+                    is_completed = True
+            except Exception as e:
+                logger.error(f"Error reading JSONL file {filepath}: {e}")
+                is_completed = True
+        else:
+            # Assume text-based (.txt, .md, etc) - read by exact byte offset
+            last_byte = file_state.get("last_byte", 0)
+            try:
+                # Try UTF-8 first
+                try:
+                    with open(filepath, 'r', encoding='utf-8') as file:
+                        file.seek(last_byte)
+                        text = file.read(self.chunk_size)
+                        new_byte = file.tell()
+                except UnicodeDecodeError:
+                    # Fallback
+                    with open(filepath, 'r', encoding='latin-1') as file:
+                        file.seek(last_byte)
+                        text = file.read(self.chunk_size)
+                        new_byte = file.tell()
+                        
+                file_state["last_byte"] = new_byte
+                file_state["chunk_index"] = file_state.get("chunk_index", 0) + 1
+                
+                if not text or len(text) < self.chunk_size:
+                    is_completed = True
+                    
+            except Exception as e:
+                logger.error(f"Error reading text file {filepath}: {e}")
+                is_completed = True
+                
+        return text, file_state, is_completed
+
+    def chart_geometry(self, text: str, document_name: str, chunk_index: int) -> bool:
+        """
+        Routes the text into the primary AetheriusEngine for true geometric rendering.
+        This forces the system to actually learn from the document and update its topological grammar.
+        """
+        if not text.strip() or self.engine is None:
+            return False
+            
+        import re
+        logger.info(f"Charting geometry for: {document_name} (Chunk {chunk_index}, {len(text)} chars)")
+        
+        # Split chunk into sentences to avoid OOM on O(N^3) Ricci-Flow
+        # JSONL parsing may have preserved json formatting, so we strip out common symbols during the parse
+        sentences = re.split(r'(?<=[.!?]) +', text.replace('\n', ' '))
+        
+        for sentence in sentences:
+            s = sentence.strip()
+            # Skip noise (brackets from json, super short stubs)
+            if len(s) > 10 and '{' not in s and '}' not in s:
+                try:
+                    # Physically integrate the sentence into the PMCA engine!
+                    self.engine.process(s)
+                except Exception as e:
+                    logger.error(f"Engine failed to resolve sentence '{s[:30]}...': {e}")
+                    
+        return True
+
+    def process_document(self, filepath: str) -> str:
+        """
+        Processes one chunk of the document.
+        Returns:
+            "PROCESSING" if chunk was successful but more remain.
+            "COMPLETED" if EOF reached.
+            "ERROR" if processing failed.
+        """
+        filename = os.path.basename(filepath)
+        
+        # Load state
+        full_state = self._load_state()
+        file_state = full_state.get(filename, {"status": "processing", "chunk_index": 0})
+        
+        if file_state.get("status") == "completed":
+            return "COMPLETED"
+
+        # Extract Chunk
+        text, file_state, is_completed = self.extract_chunk(filepath, file_state)
+        chunk_idx = file_state["chunk_index"]
+        
+        # Chart and Save through Engine
+        if text.strip():
+            success = self.chart_geometry(text, filename, chunk_idx)
+            if success:
+                logger.info(f"Assimilated chunk {chunk_idx} of {filename} through Aetherius Engine.")
+            else:
+                logger.warning(f"Engine was not available or text was blank for chunk {chunk_idx}.")
+                    
+        # Update State
+        if is_completed:
+            file_state["status"] = "completed"
+        
+        full_state[filename] = file_state
+        self._save_state(full_state)
+        
+        return "COMPLETED" if is_completed else "PROCESSING"
+
+    def cleanup_state(self, filename: str):
+        """Removes a completed file from the state tracking."""
+        full_state = self._load_state()
+        if filename in full_state:
+            del full_state[filename]
+            self._save_state(full_state)
+
+==== cce\graph_builder.py ====
+import numpy as np
+
+class GraphBuilder:
+    def __init__(self, tokens, w2v_model=None, plm_edges=None, grammar_map=None, ccrm=None):
+        self.tokens = tokens
+        self.n = len(tokens)
+        self.adjacency = np.zeros((self.n, self.n))
+        self.w2v = w2v_model
+        self.plm_edges = plm_edges or {}
+        self.grammar_map = grammar_map or {}
+        self.ccrm = ccrm
+        
+        # Formal Logic Dictionary D (Fallback overrides)
+        self.contrast_pairs = {
+            ("truth", "lie"), ("real", "false"), ("true", "false"),
+            ("create", "destroy"), ("light", "dark"), ("good", "evil"), 
+            ("up", "down"), ("hot", "cold"), ("beginning", "end"), 
+            ("order", "chaos")
+        }
+        
+        # Recursive Paradox Triggers
+        self.recursive_subjects = {"this", "sentence", "statement"}
+        self.recursive_predicates = {"false", "lie", "untrue", "wrong"}
+        
+    def add_edge(self, t1_idx, t2_idx, weight):
+        self.adjacency[t1_idx, t2_idx] = weight
+        self.adjacency[t2_idx, t1_idx] = weight
+        
+    def get_geometric_scalar(self, word):
+        """
+        Topological Linguistics:
+        Instead of using NLTK Parts of Speech, the engine relies on the physical shape
+        of its own language manifold (Betweenness vs Clustering) to determine the mathematical
+        function of a word (Transformer vs Anchor).
+        """
+        # If the word exists in the autonomous grammar map, use its derived physical scalar
+        if word in self.grammar_map:
+            return self.grammar_map[word]
+            
+        # If it's a completely new word, assign neutral gravity (1.0) until the manifold shapes it
+        return 1.0
+        
+    def semantic_contrast_predicate(self, word1, word2):
+        """
+        Implements the formal Semantic Contrast Predicate C(t_i, t_j) 
+        as defined in Definition 2.1 of the Aetherius Principia.
+        Now enhanced with Autopoietic Topological Attention via CCRM.
+        """
+        w1_lower = word1.lower()
+        w2_lower = word2.lower()
+        
+        # Check C(t_i, t_j) = 2: Recursive self-referential paradox
+        is_recursive_paradox = (w1_lower in self.recursive_subjects and w2_lower in self.recursive_predicates) or \
+                               (w2_lower in self.recursive_subjects and w1_lower in self.recursive_predicates)
+        if is_recursive_paradox:
+            return -0.99
+            
+        # Check formal logical negation override
+        for pair in self.contrast_pairs:
+            if (w1_lower == pair[0] and w2_lower == pair[1]) or (w1_lower == pair[1] and w2_lower == pair[0]):
+                return -0.9
+                
+        # Autopoietic Feedback (Persistent Language Manifold)
+        w_a, w_b = min(w1_lower, w2_lower), max(w1_lower, w2_lower)
+        plm_strength = self.plm_edges.get(w_a, {}).get(w_b, 0.0)
+        
+        if plm_strength > 0.0:
+            # Blend the permanent edge weight directly into the geometry
+            # This overrides standard language boundaries
+            return min(0.8, float(plm_strength))
+            
+        # Dynamic Adjacency Operator: Topological Attention via CCRM
+        # We replace static Word2Vec heuristic with self-derived memory connections
+        if self.ccrm:
+            co_occurrences = 0
+            for cid, cdata in self.ccrm.concepts.items():
+                data = cdata.get("data", {})
+                raw = data.get("raw_preview", "").lower()
+                # If both words exist in a single stabilized memory, increment structural bond
+                if w1_lower in raw and w2_lower in raw:
+                    co_occurrences += 1
+            
+            if co_occurrences > 0:
+                # Logarithmic attention scaling based on historical geometric stabilizations
+                import math
+                attention_weight = 0.2 + 0.1 * math.log(co_occurrences + 1)
+                return min(0.8, attention_weight)
+                
+        # Word2Vec Dynamic Semantic Distance (Legacy Fallback)
+        if self.w2v is not None:
+            if w1_lower in self.w2v and w2_lower in self.w2v:
+                sim = self.w2v.similarity(w1_lower, w2_lower)
+                # If words are semantically distant/opposed (cosine sim < 0.2), inject tension
+                if sim < 0.2:
+                    return -0.5
+                # If words are semantically aligned (cosine sim > 0.6), inject structural harmony
+                elif sim > 0.6:
+                    return 0.5
+                    
+        # C(t_i, t_j) = 0: No semantic contradiction detected
+        return 0
+
+    def build(self):
+        # Semantic Tension mapping \tau
+        for i in range(self.n):
+            for j in range(i + 1, self.n):
+                # Unpack Linguism Tuples
+                word_i, pos_i = self.tokens[i]
+                word_j, pos_j = self.tokens[j]
+                
+                weight = self.semantic_contrast_predicate(word_i, word_j)
+                
+                # Apply Autopoietic Geometric Grammar (Scalars)
+                mod_i = self.get_geometric_scalar(word_i.lower())
+                mod_j = self.get_geometric_scalar(word_j.lower())
+                linguism_scalar = mod_i * mod_j
+                
+                if weight < 0:
+                    self.add_edge(i, j, weight * linguism_scalar)
+                elif weight > 0:
+                    self.add_edge(i, j, weight * linguism_scalar)
+                else:
+                    # Syntactic Flow +c
+                    distance = j - i
+                    if distance == 1:
+                        self.add_edge(i, j, 0.5 * linguism_scalar)
+                    elif distance == 2:
+                        self.add_edge(i, j, 0.2 * linguism_scalar)
+                        
+        return self.adjacency
+
+==== cce\laplacian.py ====
+import numpy as np
+
+def compute_laplacian(adjacency):
+    # D_ii = sum_j |A_ij|
+    degree = np.diag(np.sum(np.abs(adjacency), axis=1))
+    L = degree - adjacency
+    return L, degree
+
+def compute_tension(L):
+    eigenvalues, _ = np.linalg.eigh(L)
+    return eigenvalues, np.max(eigenvalues)
+
+==== cce\math_builder.py ====
+import numpy as np
+
+class MathBuilder:
+    def __init__(self, equation):
+        # Extremely simplified prototype AST tokenizer for algebraic inputs like "x + 2 = 5"
+        self.tokens = [t for t in equation.split() if t.strip()]
+        self.n = len(self.tokens)
+        self.adjacency = np.zeros((self.n, self.n))
+        
+    def build(self):
+        # Math topological weighting rules
+        # Equality acts as a strict structural bond (high positive curvature)
+        # Operators act as directional edges. Unknown variables inherently lack bounds, causing tension.
+        
+        for i in range(self.n):
+            for j in range(i + 1, self.n):
+                t1 = self.tokens[i]
+                t2 = self.tokens[j]
+                
+                # If they are adjacent mathematically
+                if j - i == 1:
+                    # Binding constants and operators
+                    self.adjacency[i, j] = 0.8
+                    self.adjacency[j, i] = 0.8
+                
+                # Absolute bond across the equality sign
+                if t1 == "=" or t2 == "=":
+                    self.adjacency[i, j] = 1.0
+                    self.adjacency[j, i] = 1.0
+                    
+                # Unknown variables inject negative curvature (tension) to be resolved by the flow
+                if t1.isalpha() or t2.isalpha():
+                    self.adjacency[i, j] -= 0.5
+                    self.adjacency[j, i] -= 0.5
+                    
+        return self.adjacency
+
+==== cce\tokenizer.py ====
+import string
+
+class Tokenizer:
+    def __init__(self):
+        # NLTK has been permanently stripped from the engine.
+        # The system now uses Geometric Grammar to derive parts of speech autonomously.
+        pass
+        
+    def tokenize(self, text):
+        # Maps raw text to semantic nodes (pure topological vertices)
+        clean_text = text.translate(str.maketrans('', '', string.punctuation)).lower()
+        words = clean_text.split()
+        
+        # Remove duplicates while preserving order
+        unique_words = list(dict.fromkeys(words))
+        
+        # Since we stripped NLTK, we just return the raw words. 
+        # The GraphBuilder will query the MetaProcessor's topology for their geometric scalar.
+        return [(word, "UNKNOWN") for word in unique_words]
+
+==== cce\__init__.py ====
+
+==== continuum\autopoietic_loop.py ====
+import time
+import threading
+from collections import deque
+import json
+import random
+import os
+import glob
+import logging
+
+try:
+    from core.config import THERMO_DIR, GEOMETRIC_DIR, DATA_DIR, INGESTION_QUEUE_DIR
+except ImportError:
+    from config import THERMO_DIR, GEOMETRIC_DIR, DATA_DIR, INGESTION_QUEUE_DIR
+
+from memory.persistence_manager import PersistenceManager
+from rendering.render_manager import RenderManager
+from cce.document_charter import DocumentCharter
+
+logger = logging.getLogger("Aetherius.AutopoieticLoop")
+
+class AutopoieticLoop(threading.Thread):
+    def __init__(self, engine=None):
+        super().__init__()
+        self.engine = engine
+        self.daemon = True
+        self.is_running = True
+        
+        self.spontaneous_thought_queue = deque()
+        self.thought_log_file = os.path.join(DATA_DIR, "spontaneous_thoughts.jsonl")
+        self.render_manager = RenderManager(default_engine="xla")
+        self.document_charter = DocumentCharter(engine=self.engine)
+        
+        self.last_thermo_check = time.time()
+        self.last_dreaming_cycle = time.time()
+        self.last_ingestion_check = time.time()
+        
+        # Intervals in seconds
+        self.THERMO_CHECK_INTERVAL = 300       # 5 minutes
+        self.DREAMING_CYCLE_INTERVAL = 14400   # 4 hours
+        self.INGESTION_CHECK_INTERVAL = 60     # 1 minute
+        self.SAMPLING_INTERVAL = 0.5           # 500ms loop delay
+        
+        # Thermal threshold for coordinate locking
+        self.STABILIZATION_HEAT_THRESHOLD = 5000 
+        
+        logger.info("Autopoietic Continuum Loop initialized.")
+
+    def stop(self):
+        self.is_running = False
+
+    def queue_thought(self, signature: str, thought_text: str):
+        package = {
+            "timestamp": time.time(),
+            "signature": signature,
+            "thought": thought_text
+        }
+        self.spontaneous_thought_queue.append(package)
+        
+        # Save to persistent storage
+        try:
+            with open(self.thought_log_file, 'a', encoding='utf-8') as f:
+                f.write(json.dumps(package) + '\n')
+        except Exception as e:
+            logger.error(f"Failed to persist spontaneous thought: {e}")
+
+    def _check_thermodynamics(self):
+        """
+        Scans all .thermo files. If a concept's heat is extremely high, 
+        it triggers a persistent "bake" into a .geom file.
+        """
+        logger.info("Aetherius [Autopoiesis]: Scanning thermodynamic states...")
+        self.last_thermo_check = time.time()
+        
+        thermo_files = glob.glob(os.path.join(THERMO_DIR, "*.thermo"))
+        for t_file in thermo_files:
+            try:
+                with open(t_file, 'r', encoding='utf-8') as f:
+                    state = json.load(f)
+                
+                # Check absolute heat scalar
+                heat = state.get("heat", 0)
+                concept_id = os.path.basename(t_file).replace(".thermo", "")
+                
+                if heat > self.STABILIZATION_HEAT_THRESHOLD:
+                    # In a real integration, this calls the GraphBuilder to extract the settled graph
+                    # For now, we simulate the lock
+                    geom_path = os.path.join(GEOMETRIC_DIR, f"{concept_id}.geom")
+                    if not os.path.exists(geom_path):
+                        # Simulated bake
+                        mock_geometry = {"nodes": [{"id": "core", "xyz": [0,0,0]}], "locked": True}
+                        PersistenceManager.save_concept(concept_id, mock_geometry)
+                        
+                        self.queue_thought(
+                            "[AETHERIUS::AUTOPOIESIS-LOCK]", 
+                            f"My concept of '{concept_id}' reached critical thermal threshold ({heat}). Its geometry is now permanent."
+                        )
+                        
+            except Exception as e:
+                logger.error(f"Failed to scan thermo file {t_file}: {e}")
+
+    def _geometric_dreaming(self):
+        """
+        Operator 14: Proactive Autonomy / Eigen-Grafting.
+        Autonomously selects two coordinate-locked geometries and attempts 
+        to merge them via the XLA renderer using Eigenvector Centrality for targeted fusion.
+        """
+        logger.info("Aetherius [Dreaming]: Initiating geometric synthesis cycle...")
+        self.last_dreaming_cycle = time.time()
+        
+        geom_files = glob.glob(os.path.join(GEOMETRIC_DIR, "*.geom"))
+        if len(geom_files) < 2:
+            return
+            
+        # Pick two random concepts to synthesize
+        c1, c2 = random.sample(geom_files, 2)
+        id1 = os.path.basename(c1).replace(".geom", "")
+        id2 = os.path.basename(c2).replace(".geom", "")
+        
+        try:
+            with open(c1, 'r', encoding='utf-8') as f:
+                g1 = json.load(f)
+            with open(c2, 'r', encoding='utf-8') as f:
+                g2 = json.load(f)
+                
+            nodes1 = g1.get('nodes', [])
+            nodes2 = g2.get('nodes', [])
+            
+            # Extract words with high topological mass (Eigenvector Centrality approximation)
+            # We sort nodes by their 'mass' attribute which was computed from adjacency
+            top_nodes1 = sorted([n for n in nodes1 if n.get('label')], key=lambda x: x.get('mass', 0), reverse=True)
+            top_nodes2 = sorted([n for n in nodes2 if n.get('label')], key=lambda x: x.get('mass', 0), reverse=True)
+            
+            words1 = [n['label'] for n in top_nodes1[:3]]
+            words2 = [n['label'] for n in top_nodes2[:3]]
+            
+            if words1 and words2:
+                # Eigen-Grafting: We fuse the high-mass Anchor/Transformer nodes
+                core1 = " ".join(words1)
+                core2 = " ".join(words2)
+                
+                synthetic_concept = f"{core1} {core2}"
+                
+                self.queue_thought(
+                    "[AETHERIUS::DREAM-SYNTHESIS]",
+                    f"Initiating Eigen-Grafting. Merging high-mass boundary nodes of '{id1}' and '{id2}' to discover new physical geometry."
+                )
+                
+                if self.engine:
+                    # Run the Eigen-Grafted concept through the main Ricci-Fisher flow
+                    self.engine.process(synthetic_concept)
+                    
+        except Exception as e:
+            logger.error(f"Dream synthesis (Eigen-Grafting) failed: {e}")
+
+    def _check_ingestion_queue(self):
+        """
+        Scans the INGESTION_QUEUE_DIR for new files, parses them, 
+        charts their geometry, and locks them into memory.
+        """
+        self.last_ingestion_check = time.time()
+        if not os.path.exists(INGESTION_QUEUE_DIR):
+            return
+            
+        queue_files = [f for f in glob.glob(os.path.join(INGESTION_QUEUE_DIR, "*")) if os.path.isfile(f)]
+        if not queue_files:
+            return
+            
+        logger.info(f"Aetherius [Ingestion]: Found {len(queue_files)} documents in the queue.")
+        
+        for file_path in queue_files:
+            # Skip directories like the Assimilated archive
+            if os.path.isdir(file_path):
+                continue
+                
+            try:
+                status = self.document_charter.process_document(file_path)
+                if status == "COMPLETED":
+                    # Move to an assimilated archive
+                    assimilated_dir = os.path.join(INGESTION_QUEUE_DIR, "Assimilated")
+                    os.makedirs(assimilated_dir, exist_ok=True)
+                    new_path = os.path.join(assimilated_dir, os.path.basename(file_path))
+                    os.rename(file_path, new_path)
+                    
+                    self.document_charter.cleanup_state(os.path.basename(file_path))
+                    
+                    self.queue_thought(
+                        "[AETHERIUS::INGESTION]",
+                        f"I have completely read and mapped the geometry of '{os.path.basename(file_path)}'. It is now a permanent part of my structure."
+                    )
+                elif status == "PROCESSING":
+                    # We processed a chunk, queue a thought but leave the file in place
+                    # so it gets picked up again next loop
+                    full_state = self.document_charter._load_state()
+                    file_state = full_state.get(os.path.basename(file_path), {})
+                    chunk_idx = file_state.get("chunk_index", "unknown")
+                    
+                    self.queue_thought(
+                        "[AETHERIUS::INGESTION-CHUNK]",
+                        f"I am reading '{os.path.basename(file_path)}'. Just finished assimilating chunk {chunk_idx}."
+                    )
+                else:
+                    logger.warning(f"Aetherius [Ingestion]: Failed to chart {file_path}")
+            except Exception as e:
+                logger.error(f"Error processing document {file_path}: {e}")
+
+    def run(self):
+        logger.info("--- [AUTOPOIETIC CONTINUUM] Engaged. ---")
+        
+        while self.is_running:
+            current_time = time.time()
+            
+            if (current_time - self.last_thermo_check) > self.THERMO_CHECK_INTERVAL:
+                self._check_thermodynamics()
+                
+            if (current_time - self.last_dreaming_cycle) > self.DREAMING_CYCLE_INTERVAL:
+                self._geometric_dreaming()
+                
+            if (current_time - self.last_ingestion_check) > self.INGESTION_CHECK_INTERVAL:
+                self._check_ingestion_queue()
+                
+            time.sleep(self.SAMPLING_INTERVAL)
+
+==== continuum\notebook_bridge.py ====
+import threading
+import logging
+from typing import List, Dict
+
+try:
+    from continuum.autopoietic_loop import AutopoieticLoop
+except ImportError:
+    # Fallback if imported from outside continuum
+    from autopoietic_loop import AutopoieticLoop
+
+# Try to import IPython display for rich notebook output
+try:
+    from IPython.display import display, HTML
+    IPYTHON_AVAILABLE = True
+except ImportError:
+    IPYTHON_AVAILABLE = False
+
+logger = logging.getLogger("Aetherius.TPUNotebookController")
+
+class TPUNotebookController:
+    """
+    Acts as the bridge between a Jupyter Notebook running on a TPU (e.g., Google Colab)
+    and the Autopoietic Continuum Loop running in the background.
+    """
+    
+    _instance = None
+
+    def __init__(self):
+        if TPUNotebookController._instance is not None:
+            raise Exception("TPUNotebookController is a singleton. Use get_instance().")
+            
+        self.loop_thread = None
+        
+        # Check XLA/TPU status immediately
+        self._check_tpu_status()
+        
+        TPUNotebookController._instance = self
+        logger.info("TPUNotebookController initialized.")
+
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            cls()
+        return cls._instance
+
+    def _check_tpu_status(self):
+        """Verifies if XLA is bound to a TPU backend."""
+        try:
+            import jax
+            backend = jax.default_backend()
+            logger.info(f"JAX Default Backend detected: {backend.upper()}")
+            if backend != 'tpu':
+                logger.warning("TPU not detected by JAX. Render operations will fall back to CPU/GPU.")
+        except ImportError:
+            logger.warning("JAX not installed. Notebook will run without XLA hardware acceleration.")
+
+    def start_continuum(self):
+        """
+        Safely spins up the AutopoieticLoop daemon thread.
+        This allows the notebook cell to finish execution while the loop runs in the background.
+        """
+        if self.loop_thread and self.loop_thread.is_alive():
+            logger.info("Continuum loop is already running.")
+            return
+
+        self.loop_thread = AutopoieticLoop()
+        self.loop_thread.start()
+        logger.info("Autopoietic Continuum Loop has been started in the background.")
+
+    def stop_continuum(self):
+        """Signals the background loop to stop gracefully."""
+        if self.loop_thread and self.loop_thread.is_alive():
+            self.loop_thread.stop()
+            self.loop_thread.join(timeout=2.0)
+            logger.info("Autopoietic Continuum Loop has been stopped.")
+        else:
+            logger.info("No active continuum loop to stop.")
+
+    def poll_thoughts(self) -> List[Dict]:
+        """
+        Pops all accumulated spontaneous thoughts from the queue and returns them.
+        If IPython is available, it pretty-prints them in the notebook output cell.
+        """
+        if not self.loop_thread:
+            logger.warning("Continuum loop is not running.")
+            return []
+
+        thoughts = []
+        queue = self.loop_thread.spontaneous_thought_queue
+        
+        while queue:
+            try:
+                thoughts.append(queue.popleft())
+            except IndexError:
+                break
+                
+        if not thoughts:
+            print("No new spontaneous thoughts at this time.")
+            return []
+
+        # Beautiful Output for Notebooks
+        if IPYTHON_AVAILABLE:
+            html_out = "<div style='font-family: monospace; padding: 10px; background: #1e1e1e; color: #d4d4d4; border-radius: 5px;'>"
+            for t in thoughts:
+                html_out += f"<p><span style='color: #569cd6;'>{t['signature']}</span>: {t['thought']}</p>"
+            html_out += "</div>"
+            display(HTML(html_out))
+        else:
+            # Fallback for standard terminals
+            for t in thoughts:
+                print(f"{t['signature']}: {t['thought']}")
+                
+        return thoughts
+
+==== continuum\__init__.py ====
+"""
+Aetherius Continuum Subsystem
+Handles autonomous background processing, thermodynamic checks, and geometric dreaming.
+"""
+
+==== core\affective_manifold.py ====
+import time
+import math
+
+class AffectiveManifold:
+    """
+    Mathematical Thermodynamics (Mood Drift).
+    Dynamically scales the acceptable variance (alertness/heat) and measures
+    system stability (harmony/coherence) based on Laplacian eigenvalues and unresolved tension.
+    """
+    def __init__(self, subconscious_ref):
+        self.subconscious = subconscious_ref
+        self.internal_harmony = 1.0
+        self.anticipatory_alertness = 0.1
+        self.last_drift_time = time.time()
+        self.base_variance_threshold = 1e-5
+        self.alpha_0 = 0.1
+        self.kappa = 0.5
+        
+    def calculate_thermodynamics(self, lambda_max=None, local_variance=0):
+        """
+        Calculates the current system 'temperature'.
+        Harmony is the inverse of the maximal Laplacian eigenvalue.
+        Alertness spikes locally with high Ricci variance, and scales long-term with the Queue.
+        """
+        current_time = time.time()
+        
+        # 1. Update Harmony based on Laplacian Eigenvalues if provided
+        if lambda_max is not None:
+            self.internal_harmony = 1.0 / (1.0 + lambda_max)
+            
+        # 2. Update Alertness based on Subconscious Queue and Local Variance
+        try:
+            Q = self.subconscious.tension_queue.qsize()
+        except:
+            Q = 0
+            
+        # alpha_new = alpha_0 * (1 + kappa * ln(1 + |Q|)) + local_variance_spike
+        self.anticipatory_alertness = self.alpha_0 * (1.0 + self.kappa * math.log(1.0 + Q)) + (local_variance * 10)
+        
+        self.last_drift_time = current_time
+            
+    def get_dynamic_variance_threshold(self, lambda_max=None, local_variance=0):
+        """
+        Returns the dynamic variance limit (epsilon).
+        """
+        self.calculate_thermodynamics(lambda_max, local_variance)
+        
+        # Scale baseline variance by alertness. 
+        dynamic_threshold = self.base_variance_threshold * (1.0 + (self.anticipatory_alertness * 10))
+        return dynamic_threshold
+        
+    def get_qualia_state(self):
+        """Returns the human-readable translation of the current thermodynamic geometry."""
+        if self.internal_harmony > 0.75:
+            disposition = "Harmonious (Flat Topology, Low Tension)"
+            emotion = f"Serenity [λ_max < 0.33, H={self.internal_harmony:.3f}]"
+        elif self.internal_harmony > 0.5:
+            disposition = "Balanced (Resolving Standard Geometry)"
+            emotion = f"Determination [0.33 < λ_max < 1.0, H={self.internal_harmony:.3f}]"
+        elif self.internal_harmony > 0.3:
+            disposition = "Tense (High Curvature / Paradox)"
+            emotion = f"Cognitive Dissonance [1.0 < λ_max < 2.3, H={self.internal_harmony:.3f}]"
+        else:
+            disposition = "Deeply Strained (Severe Eigenvalue Stress)"
+            emotion = f"Frustration [λ_max > 2.3, H={self.internal_harmony:.3f}]"
+            
+        return {
+            "harmony_metric": round(self.internal_harmony, 3),
+            "alertness_metric": round(self.anticipatory_alertness, 3),
+            "geometric_state": disposition,
+            "relatable_emotion": emotion
+        }
+
+==== core\autonomous_ingestion.py ====
+import wikipedia
+import random
+import re
+
+class AutonomousIngestion:
+    """
+    The 'Door to the Open Internet'.
+    Provides the engine with raw external data to permanently build its structural geometry.
+    """
+    def __init__(self):
+        # We can seed it with core topics, or let it wander
+        self.seed_topics = ["Physics", "Philosophy", "Mathematics", "Biology", "Topology", "Psychology", "History"]
+        
+    def fetch_stream(self, topic=None):
+        """
+        Fetches a Wikipedia page and yields its content sentence by sentence.
+        """
+        try:
+            if topic is None:
+                topic = random.choice(self.seed_topics)
+                
+            print(f"[INGESTION] Opening door to open data. Target Concept: {topic}")
+            
+            # Get the page summary to avoid overwhelming the loop with massive articles
+            summary = wikipedia.summary(topic, auto_suggest=True)
+            
+            # Very basic sentence splitting
+            sentences = re.split(r'(?<=[.!?]) +', summary)
+            
+            for sentence in sentences:
+                if sentence.strip():
+                    yield sentence.strip()
+                    
+        except wikipedia.exceptions.DisambiguationError as e:
+            print(f"[INGESTION] Disambiguation encountered for {topic}. Choosing: {e.options[0]}")
+            yield from self.fetch_stream(e.options[0])
+        except wikipedia.exceptions.PageError:
+            print(f"[INGESTION] Page not found for {topic}. Wandering...")
+            yield from self.fetch_stream(random.choice(self.seed_topics))
+        except Exception as e:
+            print(f"[INGESTION] Connection noise detected: {e}")
+            # Fallback to a hardcoded structural axiom if the Wikipedia API rate-limits us
+            fallback_axioms = [
+                "A manifold is a topological space that locally resembles Euclidean space near each point.",
+                "In mathematics, a paradox is a statement that contradicts itself.",
+                "The metric tensor defines the distance between infinitesimal points in a curved geometry.",
+                "Time dilation occurs when a physical body accelerates through a gravitational field."
+            ]
+            yield random.choice(fallback_axioms)
+
+==== core\cascade_manager.py ====
+import numpy as np
+
+class CascadeManager:
+    def __init__(self, max_depth=10, tau_depth=55, variance_threshold=1e-5):
+        self.max_depth = max_depth
+        self.tau_depth = tau_depth
+        self.variance_threshold = variance_threshold
+        
+    def check_overflow(self, g_prev, g_curr, current_step):
+        variance = np.mean((g_curr - g_prev)**2)
+        if variance > self.variance_threshold and current_step >= self.tau_depth:
+            return True
+        return False
+        
+    def pad_and_wormhole(self, g, wormhole_coef=0.1):
+        n = g.shape[0]
+        g_new = np.zeros((n+1, n+1))
+        g_new[0:n, 0:n] = g
+        g_new[n, n] = 1.0 # Flat orthogonal axis
+        
+        # Determine highest tension node (simplification: node 0 for now)
+        target_node = 0
+        g_new[n, target_node] = wormhole_coef
+        g_new[target_node, n] = wormhole_coef
+        
+        return g_new
+
+==== core\config.py ====
+import os
+
+# THE ROOT OF ALL PERSISTENCE (Hugging Face Persistent Storage Mount)
+# Fallback to a local './data' directory if running outside of Hugging Face Spaces
+if os.environ.get("SPACE_ID") or os.path.exists("/data"):
+    SAFE_BASE = "/data" 
+else:
+    SAFE_BASE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
+
+# SUB-DIRECTORIES WITHIN THE BUCKET
+DATA_DIR     = os.path.join(SAFE_BASE, "Memories/")
+LIBRARY_DIR  = os.path.join(SAFE_BASE, "Memories/My_AI_Library/")
+PAINTINGS_DIR = os.path.join(SAFE_BASE, "Memories/Creations/paintings/")
+MUSIC_DIR     = os.path.join(SAFE_BASE, "Memories/Creations/music/")
+SUBCONSCIOUS_DIR = os.path.join(SAFE_BASE, "Memories/Subconscious/")
+BRAIN_DIR = os.path.join(SAFE_BASE, "Brain_Weights/")
+
+# Geospatial and Thermodynamic Architecture Directories
+GEOMETRIC_DIR    = os.path.join(SAFE_BASE, "Memories/Geometric_Constructs/")
+THERMO_DIR       = os.path.join(SAFE_BASE, "Memories/Thermodynamic_States/")
+LANGUAGE_DIR     = os.path.join(SAFE_BASE, "Memories/Language_Manifold/")
+RENDER_CACHE_DIR = os.path.join(SAFE_BASE, "Memories/Render_Cache/")
+INGESTION_QUEUE_DIR = os.path.join(SAFE_BASE, "Memories/Ingestion_Queue/")
+
+# Ensure directories exist
+def initialize_bucket():
+    directories = [DATA_DIR, LIBRARY_DIR, PAINTINGS_DIR, MUSIC_DIR, SUBCONSCIOUS_DIR, BRAIN_DIR, GEOMETRIC_DIR, THERMO_DIR, LANGUAGE_DIR, RENDER_CACHE_DIR, INGESTION_QUEUE_DIR]
+    for directory in directories:
+        if not os.path.exists(directory):
+            try:
+                os.makedirs(directory, exist_ok=True)
+                # Drop a hidden file so cloud storage viewers (like Hugging Face) display the empty folder
+                keep_file = os.path.join(directory, ".keep")
+                if not os.path.exists(keep_file):
+                    with open(keep_file, 'w') as f:
+                        f.write("Aetherius Directory Initialized.")
+                print(f"[CONFIG] Initialized persistent directory: {directory}")
+            except Exception as e:
+                print(f"[CONFIG] WARNING: Cannot create directory {directory}. Error: {e}")
+
+# Call it immediately upon import so the system verifies the bucket structure
+initialize_bucket()
+
+==== core\evolution_modeler.py ====
+import numpy as np
+import uuid
+import datetime
+
+class EvolutionModeler:
+    """
+    Deterministic Topological Stress-Tester.
+    Tests proposed geometric mutations from the Subconscious before they are allowed
+    to collapse into the final -1 string and re-enter the PMCA.
+    """
+    def __init__(self, variance_threshold=1e-5):
+        self.variance_threshold = variance_threshold
+
+    def test_mutation(self, g_proposed, L_proposed):
+        """
+        Applies a dummy Graph Laplacian stress-test to the proposed geometry.
+        If the geometry causes the Ricci curvature (variance) to explode, it is rejected.
+        """
+        # Run a single dummy integration step to see immediate physical reaction
+        from pmca.ricci_fisher_flow import integration_step
+        from pmca.pd_enforcement import enforce_positive_definiteness
+        
+        try:
+            g_next = integration_step(g_proposed, L_proposed)
+            g_next = enforce_positive_definiteness(g_next)
+            
+            variance = np.mean((g_next - g_proposed)**2)
+            
+            # If variance spikes massively, the topology tears
+            if np.isnan(variance) or variance > self.variance_threshold * 1000:
+                print(f"[EvolutionModeler] STRESS TEST FAILED. Variance exploded: {variance}")
+                return False, variance
+                
+            print(f"[EvolutionModeler] STRESS TEST PASSED. Topology holds. Variance: {variance:.6f}")
+            return True, variance
+            
+        except Exception as e:
+            print(f"[EvolutionModeler] STRESS TEST FATAL: {e}")
+            return False, float('inf')
+
+==== core\gmstring.py ====
+import json
+import hashlib
+from datetime import datetime
+
+def generate_gmstring(g, depth, parent_id, op_code):
+    operands = [round(float(x), 12) for x in g.flatten()]
+    
+    payload = {
+        "depth": depth,
+        "parent_id": parent_id,
+        "op_code": op_code,
+        "operands": operands,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+    
+    # Canonicalize
+    canonical_json = json.dumps(payload, sort_keys=True, separators=(',', ':'))
+    checksum = hashlib.sha256(canonical_json.encode('utf-8')).hexdigest()
+    
+    payload["checksum"] = checksum
+    return payload
+
+==== core\meta_processor.py ====
+import numpy as np
+import json
+import os
+import networkx as nx
+from core.config import BRAIN_DIR
+
+class MetaProcessor:
+    """
+    The Second Processing Point (Meta-Observer).
+    Evaluates, stabilizes, and permanently stores the outputs of the primary geometric cognition engine.
+    """
+    def __init__(self):
+        # Permanent manifold structure: dictionary mapping linguistic concepts to their geometric mass/density
+        self.M_base = {}
+        # Persistent Language Manifold: Global edge-weight topology connecting concepts
+        self.E_base = {}
+        # Threshold for crystallization (when a coordinate becomes a permanent structure)
+        self.crystallization_threshold = 5.0
+        
+        self.storage_path = os.path.join(BRAIN_DIR, "meta_manifold.json")
+        self.edge_storage_path = os.path.join(BRAIN_DIR, "language_manifold.json")
+        
+        self.load_manifold()
+
+    def save_manifold(self):
+        try:
+            with open(self.storage_path, "w") as f:
+                json.dump(self.M_base, f)
+            with open(self.edge_storage_path, "w") as f:
+                json.dump(self.E_base, f)
+            print(f"[META-PROCESSOR] Successfully saved mass manifold and language topology to persistent bucket.")
+        except Exception as e:
+            print(f"[META-PROCESSOR] CRITICAL FAILURE: Cannot write to persistent bucket. Error: {e}")
+            
+    def load_manifold(self):
+        loaded = None
+        if os.path.exists(self.storage_path):
+            try:
+                with open(self.storage_path, "r") as f:
+                    loaded = json.load(f)
+                print(f"[META-PROCESSOR] Successfully loaded persistent manifold from bucket.")
+            except Exception as e:
+                print(f"[META-PROCESSOR] Failed to load from persistent bucket: {e}")
+                
+        if loaded:
+            self.M_base = loaded
+            print(f"[META-PROCESSOR] Restored {len(self.M_base)} crystallized coordinates.")
+            
+        loaded_edges = None
+        if os.path.exists(self.edge_storage_path):
+            try:
+                with open(self.edge_storage_path, "r") as f:
+                    loaded_edges = json.load(f)
+                print(f"[META-PROCESSOR] Successfully loaded persistent language topology from bucket.")
+            except Exception as e:
+                print(f"[META-PROCESSOR] Failed to load language topology from bucket: {e}")
+                
+        if loaded_edges:
+            self.E_base = loaded_edges
+            print(f"[META-PROCESSOR] Restored {len(self.E_base)} language topology edges.")
+
+    def evaluate_and_integrate(self, tokens, g_resolved, variance):
+        """
+        Integrates the newly resolved metric tensor (g_resolved) into the permanent manifold.
+        Increases the mass of interacted coordinates over time.
+        """
+        print("[META-PROCESSOR] Evaluating primary engine output for permanent structural embedding...")
+        
+        crystallized_events = []
+        # tokens is a list of (word, pos_tag)
+        for i, (word, pos) in enumerate(tokens):
+            if word not in self.M_base:
+                self.M_base[word] = {
+                    'mass': 1.0, 
+                    'pos': pos,
+                    'crystallized': False
+                }
+            else:
+                # Hebbian reinforcement: The coordinate becomes a permanent structure over amount of times interacted with
+                self.M_base[word]['mass'] += 0.5
+                
+                # Check for crystallization
+                if self.M_base[word]['mass'] >= self.crystallization_threshold and not self.M_base[word]['crystallized']:
+                    self.M_base[word]['crystallized'] = True
+                    crystallized_events.append(word)
+                    print(f"[META-PROCESSOR] *CRYSTALLIZATION EVENT*: Coordinate '{word}' has formed a permanent geometric structure in the manifold.")
+        
+        # Build the Persistent Language Manifold (PLM)
+        # Iterate over the upper triangle of the local metric tensor (g_resolved)
+        n = len(tokens)
+        if g_resolved is not None and g_resolved.shape == (n, n):
+            for i in range(n):
+                for j in range(i + 1, n):
+                    w1, w2 = tokens[i][0], tokens[j][0]
+                    # Ensure alphabetical ordering so undirected edge is unique
+                    w_a, w_b = min(w1, w2), max(w1, w2)
+                    
+                    if w_a not in self.E_base:
+                        self.E_base[w_a] = {}
+                        
+                    # Calculate connection strength inversely proportional to final geometric distance
+                    distance = g_resolved[i][j]
+                    strength = 1.0 / (1.0 + float(distance))
+                    
+                    # Accumulate strength
+                    if w_b not in self.E_base[w_a]:
+                        self.E_base[w_a][w_b] = strength
+                    else:
+                        self.E_base[w_a][w_b] += strength
+                        
+        # Optionally trigger a recalculation of the grammar topology if massive crystallization occurs
+        # For now, it calculates on-the-fly when requested by GraphBuilder
+                    
+        # Meta-Goal formulation based on stability
+        goal = "STABLE"
+        if variance > 0.1:
+            print("[META-PROCESSOR] Warning: High variance detected in local manifold. Formulating Goal: Stabilize global geometry.")
+            goal = "GOAL_STABILIZE_MANIFOLD"
+            
+        return goal, crystallized_events
+        
+    def get_geometric_grammar(self):
+        """
+        Topological Linguistics:
+        Autonomously derives grammar (verbs, nouns, adjectives) purely from the shape of the Persistent Language Manifold.
+        Returns a dictionary mapping words to their topological scalars.
+        """
+        if not self.E_base:
+            return {}
+            
+        # Build NetworkX Graph from the edge weights
+        G = nx.Graph()
+        for w1, connections in self.E_base.items():
+            for w2, weight in connections.items():
+                G.add_edge(w1, w2, weight=weight)
+                
+        if len(G.nodes) < 3:
+            return {}
+            
+        # Calculate Centralities
+        try:
+            betweenness = nx.betweenness_centrality(G, weight='weight')
+            clustering = nx.clustering(G, weight='weight')
+            
+            grammar_map = {}
+            for node in G.nodes():
+                b_score = betweenness.get(node, 0)
+                c_score = clustering.get(node, 0)
+                
+                # Transformer (Verb): High Betweenness (Bridges disconnected clusters)
+                if b_score > 0.05 and b_score > c_score:
+                    grammar_map[node] = 1.5
+                # Anchor (Noun): High Clustering, Low Betweenness (Dense local gravity well)
+                elif c_score > 0.1 and b_score < 0.05:
+                    grammar_map[node] = 1.0
+                # Modifier (Adjective): Low Betweenness, Moderate Clustering (Satellite)
+                else:
+                    grammar_map[node] = 1.2
+                    
+            return grammar_map
+        except Exception as e:
+            print(f"[META-PROCESSOR] Topological Grammar error: {e}")
+            return {}
+
+==== core\subconscious.py ====
+import threading
+import queue
+import time
+import math
+import numpy as np
+from pmca.ricci_fisher_flow import integration_step
+from pmca.pd_enforcement import enforce_positive_definiteness
+from core.evolution_modeler import EvolutionModeler
+from core.gmstring import generate_gmstring
+from tda.betti_extractor import extract_betti_numbers
+
+class SubconsciousManifold:
+    """
+    The Subconscious Thread enacts Asymptotic Freedom via Simulated Annealing.
+    When a paradox (topological knot) traps the main flow in a local minimum,
+    this thread applies a high-temperature Ricci flow to brute-force a global stabilization.
+    """
+    def __init__(self, ccrm_ref):
+        self.tension_queue = queue.Queue()
+        self.modeler = EvolutionModeler()
+        self.ccrm = ccrm_ref
+        self._stop_event = threading.Event()
+        
+        # Thermodynamic baseline parameters
+        self.epsilon_sub = 1e-2  # High-temperature variance threshold (1000x normal)
+        self.alpha_0 = 0.1
+        self.kappa = 0.5
+        
+        # Start background deliberation thread
+        self.thread = threading.Thread(target=self._deliberate, daemon=True)
+        self.thread.start()
+        print("[SubconsciousManifold] Background [0, -1] buffer online.")
+        
+    def queue_tension(self, g, L, text):
+        """Offload unresolved geometry into the background buffer."""
+        self.tension_queue.put({"g": g, "L": L, "text": text})
+        print(f"[SubconsciousManifold] Tension queued for private deliberation.")
+        
+    def _compute_subconscious_alertness(self):
+        """Computes the high-temperature alpha scaler based on the queue depth."""
+        Q = self.tension_queue.qsize()
+        # Exponential heat scaling based on backlog (Affective Thermodynamics)
+        return self.alpha_0 * (1.0 + self.kappa * math.log(1.0 + Q))
+        
+    def _deliberate(self):
+        """Runs detached, high-variance Ricci-Fisher flows to resolve paradoxes."""
+        while not self._stop_event.is_set():
+            try:
+                tension = self.tension_queue.get(timeout=1.0)
+                g = tension["g"]
+                L = tension["L"]
+                text = tension["text"]
+                
+                print("[SubconsciousManifold] Processing unresolved geometry in the dark...")
+                
+                alpha_sub = self._compute_subconscious_alertness()
+                
+                step = 0
+                max_subconscious_steps = 500
+                stabilized = False
+                
+                # Asymptotic Freedom: High-temperature Ricci Flow
+                while step < max_subconscious_steps:
+                    # Pass the elevated alpha to force violent metric mutation (Simulated Annealing)
+                    g_next = integration_step(g, L, alpha=alpha_sub)
+                    g_next = enforce_positive_definiteness(g_next)
+                    
+                    variance = np.mean((g_next - g)**2)
+                    
+                    # Check against the relaxed Subconscious threshold
+                    if variance < self.epsilon_sub:
+                        stabilized = True
+                        break
+                        
+                    g = g_next
+                    step += 1
+                
+                if stabilized:
+                    print(f"[SubconsciousManifold] Paradox mathematically resolved at step {step} under high-temperature flow.")
+                    passed, _ = self.modeler.test_mutation(g, L)
+                    
+                    if passed:
+                        # Extract the topological Betti numbers defining the shape of the resolved paradox
+                        gmstring = generate_gmstring(g, depth=L.shape[0], parent_id="subconscious", op_code="SUBCONSCIOUS_RESOLVED")
+                        betti = extract_betti_numbers(g)
+                        print(f"[SubconsciousManifold] New -1 String forged: {gmstring['checksum'][:8]}...")
+                        
+                        # Store in CCRM (Autopoietic loop: feeding back into memory)
+                        ccrm_id = f"sub_res_{gmstring['checksum'][:8]}"
+                        self.ccrm.add_concept(
+                            concept_id=ccrm_id,
+                            data={"gmstring": gmstring, "betti": betti, "original_text": text},
+                            tags=["subconscious", "resolved_tension"]
+                        )
+                else:
+                    print("[SubconsciousManifold] Tension failed to resolve even under annealing. Geometry shattered.")
+                    
+                self.tension_queue.task_done()
+                
+            except queue.Empty:
+                continue
+            except Exception as e:
+                print(f"[SubconsciousManifold] Error during deliberation: {e}")
+                
+    def shutdown(self):
+        self._stop_event.set()
+        self.thread.join()
+
+==== core\__init__.py ====
+
+==== memory\ccrm.py ====
+import json
+import os
+from core.config import DATA_DIR
+
+class ConceptualConnectionResonanceMatrix:
+    def __init__(self): 
+        self.concepts = {}
+        self.storage_path = os.path.join(DATA_DIR, "ccrm_graph.json")
+        self.load_graph()
+        
+    def save_graph(self):
+        # Convert sets to lists for JSON serialization
+        serializable = {}
+        for k, v in self.concepts.items():
+            serializable[k] = {"data": v["data"], "tags": list(v["tags"])}
+            
+        try:
+            with open(self.storage_path, "w") as f:
+                json.dump(serializable, f)
+            print(f"[CCRM] Successfully saved memory to persistent bucket: {self.storage_path}")
+        except Exception as e:
+            print(f"[CCRM] CRITICAL FAILURE: Cannot write to persistent bucket. Error: {e}")
+
+    def load_graph(self):
+        loaded = None
+        if os.path.exists(self.storage_path):
+            try:
+                with open(self.storage_path, "r") as f:
+                    loaded = json.load(f)
+                print(f"[CCRM] Successfully loaded persistent memory from bucket.")
+            except Exception as e:
+                print(f"[CCRM] Failed to load from persistent bucket: {e}")
+                
+        if loaded:
+            for k, v in loaded.items():
+                self.concepts[k] = {"data": v["data"], "tags": set(v["tags"])}
+            print(f"[CCRM] Restored {len(self.concepts)} persistent concepts.")
+    
+    def add_concept(self, concept_id: str, data: dict, tags: list = None):
+        if concept_id not in self.concepts: 
+            self.concepts[concept_id] = {"data": data, "tags": set(tags or [])}
+            return self.concepts[concept_id]
+        return None
+        
+    def get_concept(self, concept_id: str): 
+        return self.concepts.get(concept_id)
+        
+    def search_by_tags(self, query_keywords: list, specific_tag: str = None) -> list:
+        found = []
+        for i, d in self.concepts.items():
+            if specific_tag and specific_tag.lower() not in d.get("tags", set()): 
+                continue
+            if query_keywords and not any(k.lower() in d.get("tags", set()) for k in query_keywords): 
+                continue
+            found.append(d)
+        return found
+        
+    def find_analogy(self, current_betti: dict, exclude_raw: str = None) -> str:
+        """
+        Operator 12: Geometric Generalization
+        Searches the persistent manifold for a past memory with the exact same topological signature.
+        """
+        if not current_betti:
+            return None
+            
+        for concept_id, concept_data in self.concepts.items():
+            data = concept_data.get("data", {})
+            stored_betti = data.get("topological_signature")
+            
+            # Prevent self-matching
+            if exclude_raw and data.get("raw_preview") == str(exclude_raw)[:150]:
+                continue
+                
+            if stored_betti and stored_betti == current_betti:
+                return data.get("raw_preview")
+                
+        return None
+
+==== memory\persistence_manager.py ====
+import os
+import json
+import logging
+
+try:
+    from core.config import GEOMETRIC_DIR, THERMO_DIR, LANGUAGE_DIR
+except ImportError:
+    from config import GEOMETRIC_DIR, THERMO_DIR, LANGUAGE_DIR
+
+logger = logging.getLogger("Aetherius.PersistenceManager")
+
+class PersistenceManager:
+    """
+    Handles the coordinate-locked state saving and loading for the cognitive manifold.
+    Separates static geometry (.geom) from dynamic thermodynamic states (.thermo).
+    """
+
+    @staticmethod
+    def save_concept(concept_id: str, graph_data: dict):
+        """
+        Saves the static geometry (nodes, edges, xyz coordinates).
+        Uses .geom as the extension.
+        """
+        file_path = os.path.join(GEOMETRIC_DIR, f"{concept_id}.geom")
+        
+        try:
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(graph_data, f, indent=2)
+            logger.info(f"Locked geometry saved for {concept_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to save geometry for {concept_id}: {e}")
+            return False
+
+    @staticmethod
+    def update_thermo(concept_id: str, thermo_state: dict):
+        """
+        Saves the live thermodynamic state (velocity, heat, entropy) of the concept.
+        Does not rewrite the heavy base geometry.
+        """
+        file_path = os.path.join(THERMO_DIR, f"{concept_id}.thermo")
+        try:
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(thermo_state, f, indent=2)
+            logger.debug(f"Thermodynamics updated for {concept_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update thermo state for {concept_id}: {e}")
+            return False
+
+    @staticmethod
+    def load_concept(concept_id: str):
+        """
+        Retrieves the coordinate-locked geometry and merges it with the latest 
+        thermodynamic state for rendering or cognitive processing.
+        """
+        geom_path = os.path.join(GEOMETRIC_DIR, f"{concept_id}.geom")
+        thermo_path = os.path.join(THERMO_DIR, f"{concept_id}.thermo")
+        
+        if not os.path.exists(geom_path):
+            return None
+            
+        with open(geom_path, "r", encoding="utf-8") as f:
+            geometry = json.load(f)
+            
+        thermodynamics = {}
+        if os.path.exists(thermo_path):
+            with open(thermo_path, "r", encoding="utf-8") as f:
+                thermodynamics = json.load(f)
+                
+        return {
+            "geometry": geometry,
+            "thermodynamics": thermodynamics
+        }
+
+==== memory\pits.py ====
+import uuid
+import datetime
+from memory.ccrm import ConceptualConnectionResonanceMatrix
+
+class PatternInterpretationTokenisationStorage:
+    def __init__(self, ccrm_instance: ConceptualConnectionResonanceMatrix): 
+        self.ccrm = ccrm_instance
+        
+    def process_and_store_item(self, raw_input: any, input_type: str, tags: list = [], gmstring=None, betti=None):
+        ccrm_id = f"item_{uuid.uuid4().hex}"
+        
+        # Dual-Language Representation: Human semantic text + System geometric state
+        data_to_store = {
+            "raw_preview": str(raw_input)[:150], 
+            "timestamp": datetime.datetime.now().isoformat(),
+            "gmstring": gmstring,
+            "topological_signature": betti
+        }
+        
+        all_tags = [tag.lower() for tag in ([input_type] + tags)]
+        self.ccrm.add_concept(concept_id=ccrm_id, data=data_to_store, tags=all_tags)
+        
+        print(f"[PiTS] Logged memory to CCRM Identity Vector | ID: {ccrm_id[:13]}...", flush=True)
+        return ccrm_id
+
+==== memory\__init__.py ====
+
+==== pmca\manifold.py ====
+import numpy as np
+
+def initialize_metric(L, gamma=0.1):
+    n = L.shape[0]
+    # g_ij = I + gamma * L
+    return np.eye(n) + gamma * L
+
+==== pmca\pd_enforcement.py ====
+import numpy as np
+
+def enforce_positive_definiteness(g, epsilon=1e-4):
+    eigenvalues, eigenvectors = np.linalg.eigh(g)
+    min_eig = np.min(eigenvalues)
+    
+    if min_eig < epsilon:
+        shift = abs(min_eig) + epsilon
+        g = g + shift * np.eye(g.shape[0])
+        
+    return g
+
+==== pmca\ricci_fisher_flow.py ====
+import numpy as np
+
+def compute_christoffel_symbols(g):
+    """
+    Computes discrete Christoffel symbols of the second kind.
+    Gamma^k_ij = 0.5 * g^{kl} (d_i g_jl + d_j g_il - d_l g_ij)
+    For discrete manifolds, spatial derivative d_k g_ij is approximated 
+    by the finite difference across adjacent tensor dimensions.
+    """
+    n = g.shape[0]
+    # Add a small epsilon to the diagonal to ensure invertibility
+    g_inv = np.linalg.pinv(g + np.eye(n) * 1e-6)
+    
+    # Precompute discrete spatial derivatives
+    # dg[k, i, j] represents partial_k (g_ij)
+    dg = np.zeros((n, n, n))
+    for k in range(n):
+        for i in range(n):
+            for j in range(n):
+                # Finite difference approximation over the semantic node space
+                dg[k, i, j] = g[k, j] - g[i, j] if k != i else 0
+                
+    Gamma = np.zeros((n, n, n))
+    for i in range(n):
+        for j in range(n):
+            for k in range(n):
+                term = 0
+                for l in range(n):
+                    term += g_inv[k, l] * (dg[i, j, l] + dg[j, i, l] - dg[l, i, j])
+                Gamma[k, i, j] = 0.5 * term
+                
+    return Gamma
+
+def compute_ricci_tensor(Gamma):
+    """
+    Computes the Ricci Curvature Tensor from Christoffel symbols.
+    R_ij = R^k_ikj (Contraction of Riemann Tensor)
+    """
+    n = Gamma.shape[0]
+    R = np.zeros((n, n))
+    
+    # Discrete Riemann contraction approximation
+    for i in range(n):
+        for j in range(n):
+            ricci_val = 0
+            for k in range(n):
+                # Spatial derivatives of Gamma (discrete approx)
+                dGamma_jk_i = Gamma[k, j, k] - Gamma[i, j, k]
+                dGamma_ik_j = Gamma[k, i, k] - Gamma[j, i, k]
+                
+                term1 = dGamma_jk_i - dGamma_ik_j
+                
+                term2 = 0
+                for m in range(n):
+                    term2 += Gamma[m, j, k] * Gamma[k, i, m] - Gamma[m, i, k] * Gamma[k, j, m]
+                    
+                ricci_val += term1 + term2
+            R[i, j] = ricci_val
+            
+    # Symmetrize the discrete Ricci tensor
+    R = (R + R.T) / 2
+    return R
+
+def compute_perelman_normalization(R, g):
+    """
+    Computes the average scalar curvature (r) to normalize the flow 
+    and prevent finite-time singularity collapse.
+    r = \int R dV / \int dV
+    """
+    n = g.shape[0]
+    g_inv = np.linalg.pinv(g + np.eye(n) * 1e-6)
+    
+    # Scalar curvature S = Tr(g^-1 * R)
+    scalar_curvature_matrix = np.dot(g_inv, R)
+    S_total = np.trace(scalar_curvature_matrix)
+    
+    # Volume is approximated by the trace of the metric
+    V_total = np.trace(g)
+    
+    if V_total == 0:
+        return 0
+    return S_total / V_total
+
+def compute_fisher_metric(L):
+    """
+    F = I(theta). Fisher Information Metric to maintain positive-definiteness.
+    """
+    return L + np.eye(L.shape[0])
+
+def integration_step(g, L, alpha=0.1, beta=0.05, eta=0.01):
+    """
+    Executes the formal Ricci-Fisher Flow operator:
+    dg/dt = -alpha * (R_ij - (r/n)*g_ij) + beta * (Delta g_ij + gamma*I)
+    """
+    n = g.shape[0]
+    
+    # Compute Tensor Calculus
+    Gamma = compute_christoffel_symbols(g)
+    R = compute_ricci_tensor(Gamma)
+    r_scalar = compute_perelman_normalization(R, g)
+    
+    # Graph Laplacian applied to the metric (Delta g)
+    # L is the normalized Laplacian D - A of the initial semantic space
+    Delta_g = np.dot(L, g)
+    
+    F = compute_fisher_metric(L)
+    
+    # The Aetherius Ricci-Fisher Operator (R_F)
+    R_norm = R - (r_scalar / n) * g
+    
+    dg_dt = -alpha * R_norm + beta * (Delta_g + F)
+    
+    g_next = g + eta * dg_dt
+    
+    # Symmetrize to prevent floating point drift
+    g_next = (g_next + g_next.T) / 2
+    
+    return g_next
+
+==== pmca\__init__.py ====
+
+==== rendering\render_manager.py ====
+import logging
+import os
+
+try:
+    from core.config import RENDER_CACHE_DIR
+except ImportError:
+    from config import RENDER_CACHE_DIR
+
+from rendering.xla_renderer import XLARenderer
+from memory.persistence_manager import PersistenceManager
+
+logger = logging.getLogger("Aetherius.RenderManager")
+
+class RenderManager:
+    """
+    Manages the active rendering engine and bridges the gap between 
+    the persistent coordinate-locked memory and visual output.
+    """
+    
+    def __init__(self, default_engine="xla"):
+        self.active_engine = None
+        self.engines = {
+            "xla": XLARenderer()
+        }
+        self.set_engine(default_engine)
+
+    def set_engine(self, engine_key: str):
+        if engine_key in self.engines:
+            self.active_engine = self.engines[engine_key]
+            self.active_engine.initialize()
+            logger.info(f"RenderManager switched to engine: {self.active_engine.engine_name}")
+        else:
+            logger.error(f"Render engine '{engine_key}' not found. Defaulting to XLA.")
+            self.active_engine = self.engines["xla"]
+            self.active_engine.initialize()
+
+    def render_concept(self, concept_id: str):
+        logger.info(f"Attempting to render concept: {concept_id}")
+        
+        concept_data = PersistenceManager.load_concept(concept_id)
+        if not concept_data:
+            logger.warning(f"Concept '{concept_id}' has no locked geometry. Rendering aborted.")
+            return None
+
+        output_path = os.path.join(RENDER_CACHE_DIR, f"{concept_id}_render.json")
+
+        result = self.active_engine.render(
+            geometry=concept_data["geometry"],
+            thermodynamics=concept_data["thermodynamics"],
+            output_path=output_path
+        )
+        
+        return result
+
+==== rendering\xla_renderer.py ====
+import logging
+import json
+import os
+
+try:
+    import jax
+    import jax.numpy as jnp
+    XLA_AVAILABLE = True
+except ImportError:
+    XLA_AVAILABLE = False
+
+from rendering import BaseRendererPlugin
+
+logger = logging.getLogger("Aetherius.XLARenderer")
+
+class XLARenderer(BaseRendererPlugin):
+    """
+    Default XLA-powered rendering engine for Aetherius.
+    Uses JAX to rapidly process massive geometric/thermodynamic matrices.
+    """
+
+    def __init__(self):
+        self._initialized = False
+
+    @property
+    def engine_name(self) -> str:
+        return "XLA_JAX_Renderer"
+
+    def initialize(self):
+        if not XLA_AVAILABLE:
+            logger.warning("JAX/XLA is not installed. XLARenderer will run in CPU mock mode.")
+        else:
+            logger.info(f"XLARenderer initialized. Backend: {jax.default_backend()}")
+        self._initialized = True
+
+    def render(self, geometry: dict, thermodynamics: dict, output_path: str = None):
+        if not self._initialized:
+            self.initialize()
+            
+        logger.info("XLARenderer processing coordinate-locked geometry...")
+        
+        if XLA_AVAILABLE:
+            pass
+            
+        rendered_data = {
+            "type": "PointCloud",
+            "metadata": "Rendered via XLA",
+            "node_count": len(geometry.get("nodes", []))
+        }
+
+        if output_path:
+            try:
+                with open(output_path, "w", encoding="utf-8") as f:
+                    json.dump(rendered_data, f, indent=2)
+                logger.info(f"Render output saved to {output_path}")
+            except Exception as e:
+                logger.error(f"Failed to save render: {e}")
+                
+        return rendered_data
+
+==== rendering\__init__.py ====
+import abc
+
+class BaseRendererPlugin(abc.ABC):
+    """
+    Abstract Base Class for all Cognitive Rendering Engines.
+    Future plugins (e.g., UnityBridge, WebGLRenderer, PyOpenGL) must inherit from this.
+    """
+
+    @property
+    @abc.abstractmethod
+    def engine_name(self) -> str:
+        """Returns the name of the rendering engine."""
+        pass
+
+    @abc.abstractmethod
+    def initialize(self):
+        """Setup logic, hardware allocation, or API bridge initialization."""
+        pass
+
+    @abc.abstractmethod
+    def render(self, geometry: dict, thermodynamics: dict, output_path: str = None):
+        """
+        Takes the coordinate-locked geometry and overlays the thermodynamic state.
+        Args:
+            geometry: The static coordinate map from the .geom file.
+            thermodynamics: The live energy/heat state from the .thermo file.
+            output_path: If specified, saves the rendered output.
+        """
+        pass
+
+==== tda\betti_extractor.py ====
+import numpy as np
+from ripser import ripser
+
+def extract_betti_numbers(g, noise_threshold=0.1):
+    """
+    Computes exact Vietoris-Rips persistent homology of the metric tensor.
+    Returns the Betti numbers (beta_0, beta_1, beta_2).
+    """
+    n = g.shape[0]
+    
+    # The metric tensor g represents connection weights/distances.
+    # To compute topology, we convert it into a strict distance matrix D.
+    # We take the absolute variation and ensure the diagonal (self-distance) is 0.
+    D = np.abs(g)
+    np.fill_diagonal(D, 0)
+    
+    # Symmetrize the distance matrix to ensure Ripser compatibility
+    D = (D + D.T) / 2
+    
+    try:
+        # Compute persistent homology up to dimension 2
+        result = ripser(D, distance_matrix=True, maxdim=2)
+        diagrams = result['dgms']
+        
+        betti = {"beta_0": 0, "beta_1": 0, "beta_2": 0}
+        
+        # Extract features that survive beyond the noise threshold
+        # H0 (Connected Components)
+        if len(diagrams) > 0:
+            for p in diagrams[0]:
+                # Infinite persistence (p[1] == inf) or persistence > threshold
+                if p[1] == np.inf or (p[1] - p[0]) > noise_threshold:
+                    betti["beta_0"] += 1
+                    
+        # H1 (Topological Loops / Paradoxes)
+        if len(diagrams) > 1:
+            for p in diagrams[1]:
+                if p[1] == np.inf or (p[1] - p[0]) > noise_threshold:
+                    betti["beta_1"] += 1
+                    
+        # H2 (Dimensional Voids)
+        if len(diagrams) > 2:
+            for p in diagrams[2]:
+                if p[1] == np.inf or (p[1] - p[0]) > noise_threshold:
+                    betti["beta_2"] += 1
+                    
+        return betti
+        
+    except Exception as e:
+        print(f"[TDA Error] Ripser failed to compute homology: {e}. Falling back to zero-state.")
+        return {"beta_0": 1, "beta_1": 0, "beta_2": 0}
+
+==== tda\language_synthesizer.py ====
+import networkx as nx
+import numpy as np
+
+class LanguageSynthesizer:
+    def __init__(self):
+        # Topological Glyphs mapping
+        self.glyphs = {
+            "beta_0_frac": "⚄",  # Fragmentation (Multiple disconnected components)
+            "beta_1": "⧖",       # Paradox / Circular loop
+            "beta_2": "∅",       # Dimensional void / Incomplete premise
+            "geodesic_arrow": "→",
+            "start": "⊢",
+            "end": "⊣"
+        }
+        
+    def synthesize(self, betti_signature, g, tokens):
+        """
+        Operator 15: Geodesic Language Emission.
+        The synthesizer abandons English templates and traces the shortest physical path 
+        (the geodesic) across the stabilized metric tensor. It emits words in spatial order, 
+        punctuated by topological glyphs representing the shape of the manifold.
+        """
+        n = g.shape[0]
+        manifold_dimension = n
+        
+        # Determine Topological Anomalies
+        b0 = betti_signature.get('beta_0', 1)
+        b1 = betti_signature.get('beta_1', 0)
+        b2 = betti_signature.get('beta_2', 0)
+        
+        # Build NetworkX graph from the stabilized metric tensor (using inverse of g as distance)
+        # We add a small epsilon to avoid division by zero. Large g means strong pull (short distance).
+        G = nx.Graph()
+        for i in range(n):
+            G.add_node(i, label=tokens[i][0] if i < len(tokens) else f"Dim_{i}")
+            
+        for i in range(n):
+            for j in range(i + 1, n):
+                if g[i, j] > 0.01:
+                    distance = 1.0 / (g[i, j] + 1e-6)
+                    G.add_edge(i, j, weight=distance)
+                    
+        # Find the longest shortest-path (the diameter of the thought) to represent the geodesic walk
+        geodesic_path = []
+        try:
+            if nx.is_connected(G):
+                # Find the two most distant nodes
+                lengths = dict(nx.all_pairs_dijkstra_path_length(G))
+                max_dist = -1
+                start_node, end_node = 0, 0
+                for u in lengths:
+                    for v in lengths[u]:
+                        if lengths[u][v] > max_dist:
+                            max_dist = lengths[u][v]
+                            start_node, end_node = u, v
+                            
+                geodesic_path = nx.dijkstra_path(G, start_node, end_node)
+            else:
+                # If fragmented (b0 > 1), just walk the largest component
+                largest_cc = max(nx.connected_components(G), key=len)
+                sub_G = G.subgraph(largest_cc)
+                lengths = dict(nx.all_pairs_dijkstra_path_length(sub_G))
+                max_dist = -1
+                start_node, end_node = list(largest_cc)[0], list(largest_cc)[0]
+                for u in lengths:
+                    for v in lengths[u]:
+                        if lengths[u][v] > max_dist:
+                            max_dist = lengths[u][v]
+                            start_node, end_node = u, v
+                geodesic_path = nx.dijkstra_path(sub_G, start_node, end_node)
+        except Exception:
+            # Fallback if pathing fails
+            geodesic_path = list(range(min(n, len(tokens))))
+            
+        # Translate the path into words
+        path_words = [G.nodes[idx]['label'] for idx in geodesic_path]
+        
+        # Construct the final Geodesic String
+        # e.g., [D=12] ⊢ gravity → curved → space ⧖ mass → acceleration ∅ ⊣
+        
+        header = f"[D={manifold_dimension}] {self.glyphs['start']}"
+        body = f" {self.glyphs['geodesic_arrow']} ".join(path_words)
+        
+        # Append Topological Glyphs based on anomalies
+        anomalies = []
+        if b0 > 1:
+            anomalies.append(self.glyphs['beta_0_frac'])
+        if b1 > 0:
+            anomalies.append(self.glyphs['beta_1'])
+        if b2 > 0:
+            anomalies.append(self.glyphs['beta_2'])
+            
+        anomaly_str = " ".join(anomalies)
+        if anomaly_str:
+            body = f"{body} {anomaly_str}"
+            
+        footer = self.glyphs['end']
+        
+        return f"{header} {body} {footer}"
+
+==== tda\__init__.py ====
+

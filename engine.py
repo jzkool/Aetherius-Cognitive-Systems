@@ -18,6 +18,8 @@ from core.meta_processor import MetaProcessor
 from core.autonomous_ingestion import AutonomousIngestion
 from memory.persistence_manager import PersistenceManager
 
+import jax.numpy as jnp
+
 import gensim.downloader as api
 import threading
 import time
@@ -123,10 +125,20 @@ class AetheriusEngine:
         step = 0
         g_prev = g.copy()
         
+        # Convert to JAX arrays for XLA acceleration
+        g_jax = jnp.array(g)
+        L_jax = jnp.array(L)
+        
         while True:
             # Ricci-Fisher Flow - Mathematical Solving occurs here as curvature smooths
-            g_next = integration_step(g, L)
-            g_next = enforce_positive_definiteness(g_next)
+            g_jax = jnp.array(g)
+            L_jax = jnp.array(L)
+            
+            g_next_jax = integration_step(g_jax, L_jax)
+            g_next_jax = enforce_positive_definiteness(g_next_jax)
+            
+            # Convert out of XLA device array for networkx/ripser CPU compatibility 
+            g_next = np.asarray(g_next_jax)
             
             variance = np.mean((g_next - g)**2)
             dynamic_threshold = self.affective.get_dynamic_variance_threshold(lambda_max=max_tension, local_variance=variance)

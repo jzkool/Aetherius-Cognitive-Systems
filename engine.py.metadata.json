@@ -1,4 +1,4 @@
 {
-  "summary": "Fixed MathBuilder instantiation in engine.py.",
-  "updatedAt": "2026-08-10T13:44:57.098428800Z"
+  "summary": "Updated engine to calculate and pass geometric grammar to GraphBuilder.",
+  "updatedAt": "2026-08-10T14:01:02.605818100Z"
 }

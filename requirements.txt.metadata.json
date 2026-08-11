@@ -1,4 +1,4 @@
 {
-  "summary": "Removed huggingface_hub from requirements",
-  "updatedAt": "2026-08-10T13:38:43.022266100Z"
+  "summary": "Added networkx and stripped NLTK from requirements.",
+  "updatedAt": "2026-08-10T14:00:32.531560100Z"
 }
