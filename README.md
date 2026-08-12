@@ -7,6 +7,10 @@ sdk: gradio
 pinned: false
 license: agpl-3.0
 ---
+
+# Jonathan Wayne Fleuren 
+# j.fleuren@aetheriuscognitivesystems.com
+
 # 🌌 Aetherius Unified Engine
 
 [![JAX](https://img.shields.io/badge/Accelerated_by-JAX-blue.svg)](https://github.com/google/jax)
